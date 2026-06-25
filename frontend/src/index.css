@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glass-panel {
+    @apply rounded-2xl border border-glass-border bg-glass backdrop-blur-xl shadow-xl;
+  }
+
+  .btn-primary {
+    @apply rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-500 active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-semibold text-white transition hover:bg-white/10;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20;
+  }
+}

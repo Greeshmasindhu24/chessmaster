@@ -1,0 +1,69 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+
+export interface UserProfile {
+  avatar_url: string | null
+  country: string | null
+  biography: string | null
+  rating_bullet: number
+  rating_blitz: number
+  rating_rapid: number
+  rating_classical: number
+  rating_puzzle: number
+  highest_rating: number
+  games_played: number
+  wins: number
+  losses: number
+  draws: number
+}
+
+export interface User {
+  id: string
+  email: string
+  username: string
+  role: string
+  is_verified: boolean
+  profile: UserProfile | null
+}
+
+interface AuthState {
+  user: User | null
+  accessToken: string | null
+  refreshToken: string | null
+  isAuthenticated: boolean
+}
+
+const stored = localStorage.getItem('chessmaster_auth')
+const initial: AuthState = stored
+  ? JSON.parse(stored)
+  : { user: null, accessToken: null, refreshToken: null, isAuthenticated: false }
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState: initial,
+  reducers: {
+    setCredentials: (
+      state,
+      action: PayloadAction<{ user: User; accessToken: string; refreshToken: string }>,
+    ) => {
+      state.user = action.payload.user
+      state.accessToken = action.payload.accessToken
+      state.refreshToken = action.payload.refreshToken
+      state.isAuthenticated = true
+      localStorage.setItem('chessmaster_auth', JSON.stringify(state))
+    },
+    logout: (state) => {
+      state.user = null
+      state.accessToken = null
+      state.refreshToken = null
+      state.isAuthenticated = false
+      localStorage.removeItem('chessmaster_auth')
+    },
+    setUser: (state, action: PayloadAction<User>) => {
+      state.user = action.payload
+      localStorage.setItem('chessmaster_auth', JSON.stringify(state))
+    },
+  },
+})
+
+export const { setCredentials, logout, setUser } = authSlice.actions
+export default authSlice.reducer

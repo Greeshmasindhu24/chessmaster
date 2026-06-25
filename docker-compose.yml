@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chess
+      POSTGRES_PASSWORD: chess
+      POSTGRES_DB: chessmaster
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chess -d chessmaster"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://chess:chess@postgres:5432/chessmaster
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-change-in-production
+      DEBUG: "true"
+      CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
+      FRONTEND_URL: http://localhost:5173
+      STOCKFISH_PATH: /usr/games/stockfish
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8001
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+
+volumes:
+  postgres_data:
