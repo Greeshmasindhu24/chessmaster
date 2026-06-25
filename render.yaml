@@ -1,5 +1,5 @@
-# Render Blueprint — deploy from ChessMasterPro folder (or set Root Directory to ChessMasterPro)
-# Docs: docs/RENDER.md
+# Render Blueprint — https://github.com/Greeshmasindhu24/chessmaster
+# Env URLs are pre-set; update in Render dashboard if your service URLs differ.
 
 databases:
   - name: chessmaster-db
@@ -8,12 +8,11 @@ databases:
     user: chess
 
 services:
-  # Backend API (Docker — includes Stockfish on Linux)
   - type: web
     name: chessmaster-api
     runtime: docker
     rootDir: backend
-    dockerfilePath: Dockerfile
+    dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /api/v1/health
     envVars:
@@ -30,20 +29,19 @@ services:
       - key: STOCKFISH_PATH
         value: /usr/games/stockfish
       - key: FRONTEND_URL
-        sync: false
+        value: https://chessmaster-web.onrender.com
       - key: CORS_ORIGINS
-        sync: false
+        value: '["https://chessmaster-web.onrender.com"]'
 
-  # Frontend static site (Vite build)
   - type: web
     name: chessmaster-web
     runtime: static
     rootDir: frontend
     buildCommand: npm ci && npm run build
-    staticPublishPath: dist
+    staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        sync: false
+        value: https://chessmaster-api.onrender.com
     routes:
       - type: rewrite
         source: /*
