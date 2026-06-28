@@ -1,4 +1,5 @@
-﻿from contextlib import asynccontextmanager
+﻿import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -13,7 +14,10 @@ from app.api.v1.router import api_router
 from app.core.config import PROJECT_ROOT, get_settings
 from app.core.database import Base, engine
 from app.core.redis import close_redis, init_cache
+from app.core.postgres_migrations import apply_postgres_migrations
 from app.core.sqlite_migrations import apply_sqlite_migrations
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 limiter = Limiter(key_func=get_remote_address)
@@ -43,6 +47,8 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         if settings.uses_sqlite:
             await apply_sqlite_migrations(conn)
+        else:
+            await apply_postgres_migrations(conn)
     yield
     await close_redis()
     await engine.dispose()
@@ -60,6 +66,13 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request: Request, exc: Exception):
+    logger.exception("Unhandled server error", exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(_request: Request, _exc: IntegrityError):
@@ -93,4 +106,5 @@ async def root():
 
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
 
