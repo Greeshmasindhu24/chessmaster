@@ -27,6 +27,9 @@ export function resolveApiOrigin(): string {
   if (isLikelyLocalDevSurface() && fromEnv.includes('onrender.com')) {
     return ''
   }
+  if (!fromEnv && typeof window !== 'undefined' && window.location.hostname.includes('chessmaster-web.onrender.com')) {
+    return 'https://chessmaster-api.onrender.com'
+  }
   return fromEnv.replace(/\/$/, '')
 }
 

@@ -47,14 +47,22 @@ function isRetryableColdStart(err: unknown): boolean {
   return !axiosErr.response && (axiosErr.code === 'ERR_NETWORK' || axiosErr.code === 'ECONNABORTED')
 }
 
+const RENDER_COLD_START_RETRY_DELAYS_MS = [2500, 5000, 8000]
+
 async function withRenderColdStartRetry<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn()
-  } catch (err) {
-    if (!API_ORIGIN || !isRetryableColdStart(err)) throw err
-    await new Promise((r) => setTimeout(r, 2500))
-    return fn()
+  let lastErr: unknown
+  const attempts = API_ORIGIN ? 1 + RENDER_COLD_START_RETRY_DELAYS_MS.length : 1
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      const canRetry = API_ORIGIN && isRetryableColdStart(err) && i < attempts - 1
+      if (!canRetry) throw err
+      await new Promise((r) => setTimeout(r, RENDER_COLD_START_RETRY_DELAYS_MS[i] ?? 2500))
+    }
   }
+  throw lastErr
 }
 
 export function formatNetworkError(err: unknown, action: string): string {
@@ -103,7 +111,7 @@ export function formatNetworkError(err: unknown, action: string): string {
       return `Request timed out (${action}) after ${REMOTE_API_TIMEOUT_MS / 1000}s. The Render API (chessmaster-api) may be waking from sleep — wait ~1 minute, open https://chessmaster-api.onrender.com/api/v1/health in a tab, then retry sign-in.`
     }
     if (onProdWeb) {
-      return `Cannot reach the API (${action}). You are on the production site (chessmaster-web). Tried ${attempted}. If chessmaster-api was sleeping, wait ~1 minute and retry (we also retry once automatically). Check https://chessmaster-api.onrender.com/api/v1/health in your browser.`
+      return `Cannot reach the API (${action}). You are on the production site (chessmaster-web). Tried ${attempted}. If chessmaster-api was sleeping, wait ~1 minute and retry (the app retries automatically during cold start). Check https://chessmaster-api.onrender.com/api/v1/health in your browser.`
     }
     return `Cannot reach server (${action}). Tried ${attempted}. If the API was sleeping, wait ~1 minute and retry. Otherwise check Render dashboard (chessmaster-api health) and your network connection.`
   }
@@ -186,7 +194,7 @@ export interface LoginData {
 }
 
 export const authApi = {
-  register: (data: RegisterData) => api.post('/auth/register', data),
+  register: (data: RegisterData) => withRenderColdStartRetry(() => api.post('/auth/register', data)),
   login: (data: LoginData) => withRenderColdStartRetry(() => api.post('/auth/login', data)),
   guestLogin: () => withRenderColdStartRetry(() => api.post('/auth/guest')),
   me: () => api.get('/auth/me'),

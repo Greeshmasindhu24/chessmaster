@@ -134,6 +134,33 @@ psql $DB -f database\migrations\003_profile_demographics.sql
 
 After migrations, restart **chessmaster-api** and confirm `/api/v1/health` is healthy.
 
+## Step 3c — View or clear production users (PostgreSQL)
+
+Use the admin script instead of manual SQL when you need to wipe test accounts on production.
+
+**Database URL:** Use the same `DATABASE_URL` as **chessmaster-api** — Render Postgres (`dpg-*`) or a dedicated Neon project. Do **not** use shared Supabase (APAD / EnterpriseKnowledgeBot); that database has a different schema and the script will refuse to run.
+
+1. Copy `DATABASE_URL` from Render → **chessmaster-api** → **Environment** (Render Postgres external URL or Neon connection string from Step 2).
+2. From PowerShell:
+
+```powershell
+cd F:\SindhuReddy\GNAMAMAI\ChessMasterPro
+
+# List emails and usernames (no changes)
+$env:DATABASE_URL = "postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require"
+.\scripts\clear-users-postgres.ps1 --list-only
+
+# Delete all users — prompts: type DELETE
+.\scripts\clear-users-postgres.ps1
+
+# Skip prompt (automation only — use carefully)
+.\scripts\clear-users-postgres.ps1 --confirm
+```
+
+The script refuses `localhost` URLs unless you pass `--force`. It deletes child tables (games, sessions, profiles, etc.) before `users`, matching the local SQLite admin script.
+
+See `scripts/README.md` for more options (`--database-url`, `--force`).
+
 ## Step 4 â€” Open your live app
 
 - **Frontend:** `https://chessmaster-web.onrender.com`
