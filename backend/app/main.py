@@ -81,5 +81,16 @@ if settings.DEBUG:
 
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return {
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "docs": "/docs",
+        "health": f"{settings.API_V1_PREFIX}/health",
+    }
+
+
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 

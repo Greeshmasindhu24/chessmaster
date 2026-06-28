@@ -18,6 +18,7 @@ from app.schemas.auth import (
     VerifyEmailConfirmRequest,
 )
 from app.services.auth_service import AuthService
+from app.services.email_service import EmailService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -28,7 +29,9 @@ async def register(data: UserRegister, request: Request, db: AsyncSession = Depe
     user_agent = request.headers.get("user-agent")
     ip = request.client.host if request.client else None
     user, access, refresh = await AuthService.issue_session(db, user, user_agent, ip)
-    verify_url = await AuthService.request_email_verification(db, user)
+    verify_url = None
+    if EmailService.is_configured():
+        verify_url = await AuthService.request_email_verification(db, user)
     return LoginResponse(
         access_token=access,
         refresh_token=refresh,
@@ -85,11 +88,11 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
 
 @router.post("/verify-email/request", response_model=MessageResponse)
 async def request_verify_email(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    verify_url = await AuthService.request_email_verification(db, user)
-    return MessageResponse(
-        message="If email delivery is configured, a verification link has been sent.",
-        verify_url=verify_url,
-    )
+    smtp_on = EmailService.is_configured()
+    await AuthService.request_email_verification(db, user)
+    if smtp_on:
+        return MessageResponse(message="Verification link sent. Check your inbox and spam folder.")
+    return MessageResponse(message="Email verification not required.")
 
 
 @router.post("/verify-email/confirm", response_model=MessageResponse)

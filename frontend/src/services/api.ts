@@ -2,11 +2,11 @@
 import { store } from '../store'
 import { logout, setCredentials } from '../store/authSlice'
 import type { Country, Gender } from '../config/profileFields'
+import { apiV1BaseUrl, isBrowserLocalDevHost, resolveApiOrigin } from '../config/apiUrl'
 
-const rawApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? ''
-const API_URL = rawApiUrl
+const API_ORIGIN = resolveApiOrigin()
 
-export const apiBaseUrl = API_URL ? `${API_URL}/api/v1` : '/api/v1'
+export const apiBaseUrl = apiV1BaseUrl()
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
@@ -17,6 +17,8 @@ export function formatNetworkError(err: unknown, action: string): string {
   const axiosErr = err as {
     response?: { status?: number; data?: { detail?: string | { msg?: string }[] } }
     config?: { baseURL?: string; url?: string }
+    code?: string
+    message?: string
   }
   if (axiosErr.response) {
     const detail = axiosErr.response.data?.detail
@@ -35,6 +37,21 @@ export function formatNetworkError(err: unknown, action: string): string {
   const base = axiosErr.config?.baseURL ?? api.defaults.baseURL ?? apiBaseUrl
   const path = axiosErr.config?.url ?? ''
   const attempted = `${base}${path}`.replace(/([^:]\/)\/+/g, '$1')
+
+  const remoteApi =
+    typeof base === 'string' &&
+    (base.startsWith('http://') || base.startsWith('https://')) &&
+    !base.includes('localhost') &&
+    !base.includes('127.0.0.1')
+
+  if (remoteApi && isBrowserLocalDevHost()) {
+    return `Cannot reach server (${action}). The app is calling ${attempted}, but local dev should use the Vite proxy. Clear VITE_API_URL in frontend/.env.local (leave it empty), restart .\\run_frontend.ps1, and run the backend on port 8001 (.\\run_backend.ps1). Calling Render from localhost is blocked by CORS.`
+  }
+
+  if (remoteApi && typeof window !== 'undefined') {
+    return `Cannot reach server (${action}). Tried ${attempted}. If the API was sleeping, wait ~1 minute and retry. Otherwise check Render dashboard (chessmaster-api health) and your network connection.`
+  }
+
   return `Cannot reach server (${action}). Tried ${attempted}. Use the Vite dev URL (http://localhost:5173) with the backend on port 8001, or restart .\\run_frontend.ps1 after closing old dev servers.`
 }
 
@@ -58,7 +75,7 @@ api.interceptors.response.use(
       const refreshToken = store.getState().auth.refreshToken
       if (refreshToken) {
         try {
-          const refreshUrl = API_URL ? `${API_URL}/api/v1/auth/refresh` : '/api/v1/auth/refresh'
+          const refreshUrl = API_ORIGIN ? `${API_ORIGIN}/api/v1/auth/refresh` : '/api/v1/auth/refresh'
           const { data } = await axios.post(refreshUrl, {
             refresh_token: refreshToken,
           })

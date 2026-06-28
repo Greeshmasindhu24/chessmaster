@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || ''
+import { resolveApiOrigin } from '../config/apiUrl'
 
 export type GameEvent =
   | 'connected'
@@ -20,7 +20,7 @@ export interface WsMessage<T = Record<string, unknown>> {
 type EventHandler = (data: Record<string, unknown>) => void
 
 function wsBaseUrl(): string {
-  const base = API_URL || window.location.origin
+  const base = resolveApiOrigin() || window.location.origin
   const url = new URL(base)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return url.origin

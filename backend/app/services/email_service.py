@@ -36,8 +36,12 @@ class EmailService:
     async def send_email(to: str, subject: str, body: str) -> bool:
         """Send email when SMTP is configured. Returns True if sent, False for dev stub."""
         if not EmailService.is_configured():
-            logger.info("Email stub (SMTP not configured) to=%s subject=%s", to, subject)
-            logger.info("Email body: %s", body)
+            logger.warning(
+                "Email not sent (SMTP not configured) to=%s subject=%s — set SMTP_HOST, SMTP_USER, SMTP_PASSWORD",
+                to,
+                subject,
+            )
+            logger.info("Email body (dev fallback): %s", body)
             return False
 
         try:

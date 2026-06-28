@@ -24,6 +24,9 @@ services:
         value: https://chessmaster-web.onrender.com
       - key: CORS_ORIGINS
         value: '["https://chessmaster-web.onrender.com"]'
+      # Optional: allow local Vite against prod API (normally use local backend + proxy)
+      # - key: CORS_DEV_ORIGINS
+      #   value: '["http://localhost:5173","http://127.0.0.1:5173"]'
 
   - type: web
     name: chessmaster-web

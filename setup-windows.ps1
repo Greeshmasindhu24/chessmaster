@@ -70,6 +70,16 @@ Write-Host "Installing frontend dependencies..."
 Push-Location $FrontendDir
 & npm install
 Pop-Location
+$FrontendEnvLocal = Join-Path $FrontendDir ".env.local"
+if (-not (Test-Path $FrontendEnvLocal)) {
+    @(
+        "# Local dev: empty VITE_API_URL uses Vite proxy -> http://127.0.0.1:8001"
+        "VITE_API_URL="
+    ) | Set-Content -Path $FrontendEnvLocal -Encoding utf8
+    Write-Host "Created frontend/.env.local (VITE_API_URL empty)" -ForegroundColor Green
+}
+
+
 
 Write-Host ""
 Write-Host "Setup complete." -ForegroundColor Green

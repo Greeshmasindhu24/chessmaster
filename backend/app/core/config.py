@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8001/api/v1/auth/google/callback"
 
     FRONTEND_URL: str = "http://localhost:5173"
+    # Optional extra origins (e.g. localhost for testing prod API from Render dashboard env)
+    CORS_DEV_ORIGINS: List[str] = []
+
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -93,8 +96,12 @@ class Settings(BaseSettings):
 
     @property
     def effective_cors_origins(self) -> List[str]:
-        """Include FRONTEND_URL and localhost/127.0.0.1 pairs in dev."""
+        """Include FRONTEND_URL, CORS_DEV_ORIGINS, and localhost/127.0.0.1 pairs in dev."""
         origins = list(self.CORS_ORIGINS)
+        for origin in self.CORS_DEV_ORIGINS:
+            o = origin.rstrip("/")
+            if o and o not in origins:
+                origins.append(o)
         if self.FRONTEND_URL and self.FRONTEND_URL not in origins:
             origins.append(self.FRONTEND_URL.rstrip("/"))
         if not self.DEBUG:

@@ -93,9 +93,11 @@ export default function SettingsPage() {
 
   const verifyMutation = useMutation({
     mutationFn: () => authApi.requestEmailVerification(),
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       setVerifyMsg(res.data.message)
       setVerifyUrl(res.data.verify_url ?? '')
+      const { data } = await authApi.me()
+      dispatch(setUser(data))
     },
     onError: (err) => setVerifyMsg(formatNetworkError(err, 'send verification')),
   })

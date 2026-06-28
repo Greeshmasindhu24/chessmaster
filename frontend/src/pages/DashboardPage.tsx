@@ -100,9 +100,11 @@ export default function DashboardPage() {
         >
           <p className="font-medium">Verify your email address</p>
           <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-300/90">
-            {navState?.justRegistered
-              ? 'We sent a verification link to your inbox. Verify to unlock AI and online play.'
-              : 'Verify your email to unlock AI and online play.'}
+            {devVerifyUrl
+              ? 'Email was not sent — SMTP is not configured on the server. Use the link below to verify.'
+              : navState?.justRegistered
+                ? 'We sent a verification link to your inbox. Check spam if it does not arrive within a few minutes.'
+                : 'Verify your email to unlock AI and online play.'}
           </p>
           {devVerifyUrl && (
             <div className="mt-3">

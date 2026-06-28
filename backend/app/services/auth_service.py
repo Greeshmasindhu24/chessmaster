@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from secrets import token_urlsafe
@@ -19,6 +20,8 @@ from app.schemas.auth import UserLogin, UserRegister
 from app.services.email_service import EmailService
 from app.services.profile_service import ProfileService
 
+logger = logging.getLogger(__name__)
+
 
 class AuthService:
     @staticmethod
@@ -36,6 +39,7 @@ class AuthService:
             username=data.username.lower(),
             hashed_password=hash_password(data.password),
             role=UserRole.PLAYER,
+            is_verified=not EmailService.is_configured(),
         )
         db.add(user)
         await db.flush()
@@ -238,11 +242,16 @@ class AuthService:
 
     @staticmethod
     async def request_email_verification(db: AsyncSession, user: User) -> str | None:
-        """Create verification token. Returns verify URL when SMTP is off (local dev)."""
+        """Send verification email when SMTP is configured. Auto-verify when it is not."""
         if user.is_verified:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified")
         if user.role == UserRole.GUEST:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Guest accounts cannot verify email")
+
+        if not EmailService.is_configured():
+            user.is_verified = True
+            logger.info("Auto-verified user %s (SMTP not configured)", user.email)
+            return None
 
         raw_token = token_urlsafe(32)
         token = EmailVerificationToken(
@@ -256,12 +265,12 @@ class AuthService:
 
         settings = get_settings()
         verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
-        sent = await EmailService.send_email(
+        await EmailService.send_email(
             user.email,
             "Verify your ChessMaster Pro email",
             f"Confirm your email address (expires in 24 hours):\n{verify_url}",
         )
-        return None if sent else verify_url
+        return None
 
     @staticmethod
     async def confirm_email_verification(db: AsyncSession, token: str) -> None:

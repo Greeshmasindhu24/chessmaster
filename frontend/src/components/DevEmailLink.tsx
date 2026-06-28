@@ -10,15 +10,16 @@ export default function DevEmailLink({
 
   return (
     <div className="rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-      <p className="font-medium">Dev mode — no email sent</p>
+      <p className="font-medium">No email sent — SMTP not configured</p>
       <p className="mt-1 text-xs text-amber-600/80 dark:text-amber-400/80">
-        SMTP is not configured on the backend. Add{' '}
+        The server skipped sending mail because{' '}
         <code className="rounded bg-amber-500/10 px-1">SMTP_HOST</code>,{' '}
         <code className="rounded bg-amber-500/10 px-1">SMTP_USER</code>, and{' '}
-        <code className="rounded bg-amber-500/10 px-1">SMTP_PASSWORD</code> to{' '}
-        <code className="rounded bg-amber-500/10 px-1">ChessMasterPro/.env</code> (see{' '}
-        <code className="rounded bg-amber-500/10 px-1">.env.example</code>), then restart the
-        backend to receive verification emails in your inbox.
+        <code className="rounded bg-amber-500/10 px-1">SMTP_PASSWORD</code> are missing. Local
+        dev: add them to <code className="rounded bg-amber-500/10 px-1">ChessMasterPro/.env</code>{' '}
+        (see <code className="rounded bg-amber-500/10 px-1">.env.example</code>) and restart the
+        backend. Production: set them on the Render <strong>chessmaster-api</strong> service and
+        redeploy.
       </p>
       <p className="mt-2 text-xs text-amber-600/80 dark:text-amber-400/80">{label}</p>
       <p className="mt-1 break-all">

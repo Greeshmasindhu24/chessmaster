@@ -77,6 +77,30 @@ Render **free tier allows only one PostgreSQL database per account**. If Bluepri
 
 (`SECRET_KEY`, `REDIS_ENABLED` come from the blueprint.)
 
+### Email verification (SMTP — required for inbox delivery)
+
+Without SMTP, registration still works but **no email is sent**. The API returns a `verify_url` in the JSON response and the UI shows an amber banner with a clickable link.
+
+Add these on **chessmaster-api** (Render Dashboard → chessmaster-api → Environment):
+
+| Variable | Example (Gmail) |
+|----------|-----------------|
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | `your@gmail.com` |
+| `SMTP_PASSWORD` | `xxxx xxxx xxxx xxxx` (16-char Google App Password) |
+| `SMTP_FROM` | `your@gmail.com` |
+
+**Gmail setup (copy-paste checklist):**
+
+1. Google Account → **Security** → enable **2-Step Verification**
+2. Security → **App passwords** → app: Mail, device: Other → name it `ChessMaster Render`
+3. Copy the 16-character password (spaces optional)
+4. Paste env vars above on **chessmaster-api**, then **Manual Deploy** → Deploy latest commit
+5. Register a new account (or Settings → Resend verification) and check inbox + spam
+
+**Verify send works:** Render → chessmaster-api → **Logs**. After resend you should see `Email sent to=...` (not `Email not sent (SMTP not configured)`). If SMTP is set but login fails, logs show `Failed to send email`.
+
 ### chessmaster-web
 
 | Variable | Value |
@@ -94,13 +118,18 @@ On first deploy (or after Phase 1 auth/profile changes), apply SQL migrations ag
 1. Open your Neon project → **SQL Editor**.
 2. Run the contents of `database/migrations/001_initial.sql` (skip if tables already exist from `create_all`).
 3. Run `database/migrations/002_phase1_foundation.sql` (idempotent — safe to re-run).
+4. Run `database/migrations/003_profile_demographics.sql` (adds `date_of_birth`, `gender` on `profiles` — idempotent).
+
+**Fresh Neon database:** You can skip 001–003 if tables do not exist yet — the API runs `create_all` on startup and creates the full schema from SQLAlchemy models. Run migrations when upgrading an **existing** production database or if `create_all` already ran with an older schema.
 
 **Option B — `psql` from your PC:**
 
 ```powershell
 cd F:\SindhuReddy\GNAMAMAI\ChessMasterPro
-psql "postgresql://user@ep-xxx.neon.tech/neondb?sslmode=require" -f database\migrations\001_initial.sql
-psql "postgresql://user@ep-xxx.neon.tech/neondb?sslmode=require" -f database\migrations\002_phase1_foundation.sql
+$DB = "postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require"
+psql $DB -f database\migrations\001_initial.sql
+psql $DB -f database\migrations\002_phase1_foundation.sql
+psql $DB -f database\migrations\003_profile_demographics.sql
 ```
 
 After migrations, restart **chessmaster-api** and confirm `/api/v1/health` is healthy.
@@ -153,3 +182,14 @@ Dummy test card: `4242 4242 4242 4242`, expiry `12/30`, CVC `123`.
 | CORS errors | Set `CORS_ORIGINS` and `FRONTEND_URL` on API to your static URL |
 | 502 on API | Check logs; confirm PostgreSQL is linked |
 | WebSocket fails | Use `https://` frontend with `VITE_API_URL=https://...` (not localhost) |
+
+
+## Troubleshooting sign-in / "Cannot reach server"
+
+| Symptom | Likely cause | Fix |
+|---------|----------------|-----|
+| Error mentions `https://chessmaster-api.onrender.com` while you use **http://localhost:5173** | `VITE_API_URL` points at Render; browser blocks cross-origin (CORS) | Set `VITE_API_URL=` (empty) in `frontend/.env.local`, stop Vite, run `.\run_frontend.ps1` and `.\run_backend.ps1` |
+| Same error on **https://chessmaster-web.onrender.com** | Free API cold start (~30–60s) or service down | Open `https://chessmaster-api.onrender.com/api/v1/health` once, wait, retry; check Render logs and `DATABASE_URL` |
+| Local proxy fails | Backend not on **8001** | Start `.\run_backend.ps1`; confirm `http://localhost:5173/api/v1/health` returns JSON |
+
+**Verify API:** `curl https://chessmaster-api.onrender.com/api/v1/health` should return `"status":"healthy"`.

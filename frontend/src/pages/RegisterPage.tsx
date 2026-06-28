@@ -55,6 +55,10 @@ export default function RegisterPage() {
           refreshToken: data.refresh_token,
         }),
       )
+      if (data.user.is_verified) {
+        navigate('/dashboard', { replace: true })
+        return
+      }
       setVerifyUrl(data.verify_url ?? '')
       setStep('verify')
     } catch (err: unknown) {
@@ -88,14 +92,21 @@ export default function RegisterPage() {
           <div className="mt-6 space-y-4 text-sm text-gray-500 dark:text-gray-400">
             {verifyUrl ? (
               <p>
-                Email was not sent (SMTP not configured). Use the dev link below, or configure SMTP
-                in the backend <code className="text-xs">.env</code> and register again.
+                Email was not sent — SMTP is not configured on the server. Use the verification
+                link below, or ask the server admin to add SMTP env vars (local{' '}
+                <code className="text-xs">.env</code> or Render dashboard for production).
               </p>
             ) : (
-              <p>
-                We sent a verification link to your inbox. Open it on this device, then return
-                here or go to your dashboard.
-              </p>
+              <>
+                <p>
+                  We sent a verification link to your inbox. Open it on this device, then return
+                  here or go to your dashboard.
+                </p>
+                <p className="text-xs">
+                  Did not arrive? Check your spam or junk folder, wait a few minutes, or resend
+                  from Settings.
+                </p>
+              </>
             )}
             <DevEmailLink label="Use this link to verify your email:" url={verifyUrl} />
           </div>
