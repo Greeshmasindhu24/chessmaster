@@ -7,6 +7,9 @@ import { RootState } from '../store'
 import { setPreferences, setTheme, ThemeMode } from '../store/settingsSlice'
 import { logout, setUser } from '../store/authSlice'
 import { authApi, formatNetworkError, profileApi } from '../services/api'
+import { BOARD_THEMES } from '../config/boardThemes'
+import { ageFromDateOfBirth, countryLabel, genderLabel } from '../config/profileFields'
+import DevEmailLink from '../components/DevEmailLink'
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -26,13 +29,21 @@ export default function SettingsPage() {
   )
   const user = useSelector((s: RootState) => s.auth.user)
 
-  const [country, setCountry] = useState(user?.profile?.country ?? '')
   const [biography, setBiography] = useState(user?.profile?.biography ?? '')
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatar_url ?? '')
   const [profileMsg, setProfileMsg] = useState('')
   const [profileErr, setProfileErr] = useState('')
   const [deleteErr, setDeleteErr] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [verifyMsg, setVerifyMsg] = useState('')
+  const [verifyUrl, setVerifyUrl] = useState('')
+
+  useEffect(() => {
+    if (user?.profile) {
+      setBiography(user.profile.biography ?? '')
+      setAvatarUrl(user.profile.avatar_url ?? '')
+    }
+  }, [user?.profile])
 
   const { data: prefs } = useQuery({
     queryKey: ['preferences'],
@@ -68,7 +79,6 @@ export default function SettingsPage() {
   const profileMutation = useMutation({
     mutationFn: () =>
       profileApi.updateProfile({
-        country: country.trim() ? country.trim().toUpperCase() : null,
         biography: biography.trim() || null,
         avatar_url: avatarUrl.trim() || null,
       }),
@@ -83,6 +93,11 @@ export default function SettingsPage() {
 
   const verifyMutation = useMutation({
     mutationFn: () => authApi.requestEmailVerification(),
+    onSuccess: (res) => {
+      setVerifyMsg(res.data.message)
+      setVerifyUrl(res.data.verify_url ?? '')
+    },
+    onError: (err) => setVerifyMsg(formatNetworkError(err, 'send verification')),
   })
 
   const deleteMutation = useMutation({
@@ -98,6 +113,11 @@ export default function SettingsPage() {
   const handleThemeChange = (next: ThemeMode) => {
     dispatch(setTheme(next))
     prefsMutation.mutate({ theme: next })
+  }
+
+  const handleBoardThemeChange = (themeId: string) => {
+    dispatch(setPreferences({ board_theme: themeId }))
+    prefsMutation.mutate({ board_theme: themeId })
   }
 
   const handleProfileSubmit = (e: FormEvent) => {
@@ -138,28 +158,40 @@ export default function SettingsPage() {
 
         <div>
           <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">Board theme</p>
-          <select
-            className="input-field max-w-xs"
-            value={boardTheme}
-            onChange={(e) => {
-              prefsMutation.mutate({ board_theme: e.target.value })
-            }}
-          >
-            <option value="classic">Classic green</option>
-            <option value="blue">Blue</option>
-            <option value="brown">Brown wood</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500">Custom boards — Phase 2</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {BOARD_THEMES.map((theme) => (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => handleBoardThemeChange(theme.id)}
+                className={`rounded-xl border p-2 text-left transition ${
+                  boardTheme === theme.id
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/30'
+                    : 'border-black/10 hover:border-emerald-500/40 dark:border-white/15'
+                }`}
+              >
+                <div className="mb-2 grid h-10 grid-cols-4 overflow-hidden rounded-md">
+                  {[theme.light, theme.dark, theme.dark, theme.light].map((color, i) => (
+                    <div key={i} style={{ backgroundColor: color }} />
+                  ))}
+                </div>
+                <span className="text-xs font-medium">{theme.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <label className="flex items-center gap-3 text-sm">
           <input
             type="checkbox"
             checked={soundEnabled}
-            onChange={(e) => prefsMutation.mutate({ sound_enabled: e.target.checked })}
+            onChange={(e) => {
+              dispatch(setPreferences({ sound_enabled: e.target.checked }))
+              prefsMutation.mutate({ sound_enabled: e.target.checked })
+            }}
             className="h-4 w-4 rounded border-gray-400"
           />
-          Sound effects (Phase 2)
+          Sound effects
         </label>
 
         <label className="flex items-center gap-3 text-sm">
@@ -174,6 +206,31 @@ export default function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title="Profile">
+        <div className="mb-4 grid gap-2 rounded-lg bg-black/5 p-4 text-sm dark:bg-white/5">
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Date of birth</span>
+            <span>{user?.profile?.date_of_birth ?? '—'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Age</span>
+            <span>
+              {user?.profile?.date_of_birth
+                ? (ageFromDateOfBirth(user.profile.date_of_birth) ?? '—')
+                : '—'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Gender</span>
+            <span>{genderLabel(user?.profile?.gender)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Country</span>
+            <span>{countryLabel(user?.profile?.country)}</span>
+          </div>
+          <p className="pt-1 text-xs text-gray-500">
+            Demographics are set at registration and cannot be changed here.
+          </p>
+        </div>
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           {profileErr && (
             <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">{profileErr}</div>
@@ -188,24 +245,16 @@ export default function SettingsPage() {
             <input className="input-field opacity-60" value={user?.username ?? ''} disabled />
           </div>
           <div>
+            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Email</label>
+            <input className="input-field opacity-60" value={user?.email ?? ''} disabled />
+          </div>
+          <div>
             <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Avatar URL</label>
             <input
               className="input-field"
               placeholder="https://..."
               value={avatarUrl}
               onChange={(e) => setAvatarUrl(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">
-              Country (ISO code)
-            </label>
-            <input
-              className="input-field max-w-[8rem] uppercase"
-              placeholder="US"
-              maxLength={2}
-              value={country}
-              onChange={(e) => setCountry(e.target.value.toUpperCase())}
             />
           </div>
           <div>
@@ -244,6 +293,22 @@ export default function SettingsPage() {
             <span>{user?.email}</span>
           </div>
           <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Gender</span>
+            <span>{genderLabel(user?.profile?.gender)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Age</span>
+            <span>
+              {user?.profile?.date_of_birth
+                ? (ageFromDateOfBirth(user.profile.date_of_birth) ?? '—')
+                : '—'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Country</span>
+            <span>{countryLabel(user?.profile?.country)}</span>
+          </div>
+          <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">Verified</span>
             <span className={user?.is_verified ? 'text-emerald-600 dark:text-emerald-400' : 'text-yellow-600'}>
               {user?.is_verified ? 'Yes' : 'No'}
@@ -251,20 +316,26 @@ export default function SettingsPage() {
           </div>
         </div>
         {!user?.is_verified && user?.role !== 'guest' && (
-          <button
-            type="button"
-            onClick={() => verifyMutation.mutate()}
-            disabled={verifyMutation.isPending}
-            className="btn-secondary mt-2 text-sm"
-          >
-            {verifyMutation.isPending ? 'Sending...' : 'Resend verification email'}
-          </button>
-        )}
-        {verifyMutation.isSuccess && (
-          <p className="mt-2 text-xs text-gray-500">{verifyMutation.data.data.message}</p>
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setVerifyMsg('')
+                setVerifyUrl('')
+                verifyMutation.mutate()
+              }}
+              disabled={verifyMutation.isPending}
+              className="btn-secondary mt-2 text-sm"
+            >
+              {verifyMutation.isPending ? 'Sending...' : 'Resend verification email'}
+            </button>
+            {verifyMsg && (
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{verifyMsg}</p>
+            )}
+            <DevEmailLink label="Use this link to verify your email:" url={verifyUrl} />
+          </>
         )}
         <p className="mt-4 text-xs text-gray-500">
-          Google sign-in and password change — Phase 2.{' '}
           <Link to="/forgot-password" className="text-emerald-600 hover:underline dark:text-emerald-400">
             Forgot password
           </Link>
@@ -312,12 +383,12 @@ export default function SettingsPage() {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Coming in Phase 2+">
+      <SettingsSection title="Coming soon">
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-500 dark:text-gray-400">
-          <li>Multiplayer rooms & spectator mode</li>
+          <li>Google Sign-In (OAuth)</li>
+          <li>Custom app icon & splash screen</li>
           <li>Game analysis & daily puzzles</li>
           <li>Friends, notifications, rankings</li>
-          <li>Admin dashboard</li>
         </ul>
       </SettingsSection>
     </div>

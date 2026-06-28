@@ -22,10 +22,19 @@ from app.services.auth_service import AuthService
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
-async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
+@router.post("/register", response_model=LoginResponse, status_code=201)
+async def register(data: UserRegister, request: Request, db: AsyncSession = Depends(get_db)):
     user = await AuthService.register(db, data)
-    return user
+    user_agent = request.headers.get("user-agent")
+    ip = request.client.host if request.client else None
+    user, access, refresh = await AuthService.issue_session(db, user, user_agent, ip)
+    verify_url = await AuthService.request_email_verification(db, user)
+    return LoginResponse(
+        access_token=access,
+        refresh_token=refresh,
+        user=user,
+        verify_url=verify_url,
+    )
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -61,8 +70,11 @@ async def google_oauth_callback():
 
 @router.post("/forgot-password", response_model=MessageResponse)
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
-    await AuthService.request_password_reset(db, data.email)
-    return MessageResponse(message="If that email exists, a reset link has been sent.")
+    reset_url = await AuthService.request_password_reset(db, data.email)
+    return MessageResponse(
+        message="If that email exists, a reset link has been sent.",
+        reset_url=reset_url,
+    )
 
 
 @router.post("/reset-password", response_model=MessageResponse)
@@ -73,8 +85,11 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
 
 @router.post("/verify-email/request", response_model=MessageResponse)
 async def request_verify_email(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    await AuthService.request_email_verification(db, user)
-    return MessageResponse(message="If email delivery is configured, a verification link has been sent.")
+    verify_url = await AuthService.request_email_verification(db, user)
+    return MessageResponse(
+        message="If email delivery is configured, a verification link has been sent.",
+        verify_url=verify_url,
+    )
 
 
 @router.post("/verify-email/confirm", response_model=MessageResponse)

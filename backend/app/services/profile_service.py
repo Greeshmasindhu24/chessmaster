@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Profile, User, UserPreferences
+from app.models import Country, Gender, Profile, User, UserPreferences
+from app.schemas.auth import UserRegister
 from app.schemas.profile import ProfileUpdateRequest, UserPreferencesUpdate
 
 
@@ -23,26 +24,28 @@ class ProfileService:
 
     @staticmethod
     async def update_profile(db: AsyncSession, user: User, data: ProfileUpdateRequest) -> Profile:
-        if not user.profile:
-            user.profile = Profile(user_id=user.id)
-            db.add(user.profile)
+        result = await db.execute(select(Profile).where(Profile.user_id == user.id))
+        profile = result.scalar_one_or_none()
+        if profile is None:
+            profile = Profile(user_id=user.id)
+            db.add(profile)
             await db.flush()
 
         if data.avatar_url is not None:
-            user.profile.avatar_url = data.avatar_url
-        if data.country is not None:
-            user.profile.country = data.country.upper()
+            profile.avatar_url = data.avatar_url
         if data.biography is not None:
-            user.profile.biography = data.biography
+            profile.biography = data.biography
 
         await db.flush()
-        await db.refresh(user.profile)
-        return user.profile
+        await db.refresh(profile)
+        return profile
 
     @staticmethod
     async def get_preferences(db: AsyncSession, user: User) -> UserPreferences:
-        if user.preferences:
-            return user.preferences
+        result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user.id))
+        prefs = result.scalar_one_or_none()
+        if prefs:
+            return prefs
 
         prefs = UserPreferences(user_id=user.id)
         db.add(prefs)
@@ -71,8 +74,22 @@ class ProfileService:
 
     @staticmethod
     async def ensure_user_defaults(db: AsyncSession, user: User) -> None:
-        if not user.profile:
+        profile_result = await db.execute(select(Profile).where(Profile.user_id == user.id))
+        if profile_result.scalar_one_or_none() is None:
             db.add(Profile(user_id=user.id))
-        if not user.preferences:
+        prefs_result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user.id))
+        if prefs_result.scalar_one_or_none() is None:
             db.add(UserPreferences(user_id=user.id))
+        await db.flush()
+
+    @staticmethod
+    async def create_profile_on_register(db: AsyncSession, user: User, data: UserRegister) -> None:
+        profile = Profile(
+            user_id=user.id,
+            country=Country(data.country.value) if data.country else None,
+            date_of_birth=data.date_of_birth,
+            gender=Gender(data.gender.value),
+        )
+        db.add(profile)
+        db.add(UserPreferences(user_id=user.id))
         await db.flush()

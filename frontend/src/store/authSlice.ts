@@ -3,6 +3,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 export interface UserProfile {
   avatar_url: string | null
   country: string | null
+  date_of_birth: string | null
+  gender: string | null
   biography: string | null
   rating_bullet: number
   rating_blitz: number
@@ -49,7 +51,15 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken
       state.refreshToken = action.payload.refreshToken
       state.isAuthenticated = true
-      localStorage.setItem('chessmaster_auth', JSON.stringify(state))
+      localStorage.setItem(
+        'chessmaster_auth',
+        JSON.stringify({
+          user: action.payload.user,
+          accessToken: action.payload.accessToken,
+          refreshToken: action.payload.refreshToken,
+          isAuthenticated: true,
+        }),
+      )
     },
     logout: (state) => {
       state.user = null
@@ -60,7 +70,15 @@ const authSlice = createSlice({
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload
-      localStorage.setItem('chessmaster_auth', JSON.stringify(state))
+      localStorage.setItem(
+        'chessmaster_auth',
+        JSON.stringify({
+          user: action.payload,
+          accessToken: state.accessToken,
+          refreshToken: state.refreshToken,
+          isAuthenticated: state.isAuthenticated,
+        }),
+      )
     },
   },
 })

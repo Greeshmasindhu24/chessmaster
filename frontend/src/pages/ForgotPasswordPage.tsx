@@ -6,6 +6,7 @@ import { authApi, formatNetworkError } from '../services/api'
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [resetUrl, setResetUrl] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -13,10 +14,14 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError('')
     setMessage('')
+    setResetUrl('')
     setLoading(true)
     try {
-      const { data } = await authApi.forgotPassword(email)
+      const { data } = await authApi.forgotPassword(email.trim())
       setMessage(data.message)
+      if (data.reset_url) {
+        setResetUrl(data.reset_url)
+      }
     } catch (err) {
       setError(formatNetworkError(err, 'request reset'))
     } finally {
@@ -39,6 +44,14 @@ export default function ForgotPasswordPage() {
           {message && (
             <div className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
               {message}
+            </div>
+          )}
+          {resetUrl && (
+            <div className="rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+              <p className="font-medium">Dev mode — SMTP not configured</p>
+              <p className="mt-1 break-all">
+                <a href={resetUrl} className="underline hover:no-underline">{resetUrl}</a>
+              </p>
             </div>
           )}
           <div>

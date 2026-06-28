@@ -48,7 +48,13 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = "noreply@chessmaster.pro"
+    SMTP_FROM: str = "noreply@chessmaster.pro"
+    # Deprecated alias — prefer SMTP_FROM
+    EMAIL_FROM: str = ""
+
+    @property
+    def smtp_from_address(self) -> str:
+        return (self.SMTP_FROM or self.EMAIL_FROM or "noreply@chessmaster.pro").strip()
 
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""

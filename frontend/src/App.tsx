@@ -1,11 +1,13 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import VerifiedPlayRoute from './components/VerifiedPlayRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import DashboardPage from './pages/DashboardPage'
 import SettingsPage from './pages/SettingsPage'
 import PlayPage from './pages/PlayPage'
@@ -25,6 +27,7 @@ export default function App() {
         <Route path="terms" element={<TermsPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+        <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route
           path="dashboard"
           element={
@@ -45,7 +48,9 @@ export default function App() {
           path="play/ai"
           element={
             <ProtectedRoute>
-              <PlayAiPage />
+              <VerifiedPlayRoute>
+                <PlayAiPage />
+              </VerifiedPlayRoute>
             </ProtectedRoute>
           }
         />
@@ -53,7 +58,9 @@ export default function App() {
           path="play/online"
           element={
             <ProtectedRoute>
-              <PlayOnlinePage />
+              <VerifiedPlayRoute>
+                <PlayOnlinePage />
+              </VerifiedPlayRoute>
             </ProtectedRoute>
           }
         />

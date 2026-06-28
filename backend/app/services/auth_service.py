@@ -23,8 +23,10 @@ from app.services.profile_service import ProfileService
 class AuthService:
     @staticmethod
     async def register(db: AsyncSession, data: UserRegister) -> User:
+        email_norm = data.email.strip().lower()
+        username_norm = data.username.strip().lower()
         existing = await db.execute(
-            select(User).where((User.email == data.email) | (User.username == data.username))
+            select(User).where((User.email == email_norm) | (User.username == username_norm))
         )
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email or username already exists")
@@ -37,20 +39,20 @@ class AuthService:
         )
         db.add(user)
         await db.flush()
-        await ProfileService.ensure_user_defaults(db, user)
+        await ProfileService.create_profile_on_register(db, user, data)
         await db.flush()
-        await db.refresh(user, ["profile", "preferences"])
-        return user
+        # Eager-load relationships; db.refresh(..., ["profile"]) triggers sync lazy-load (MissingGreenlet).
+        result = await db.execute(
+            select(User)
+            .options(selectinload(User.profile), selectinload(User.preferences))
+            .where(User.id == user.id)
+        )
+        return result.scalar_one()
 
     @staticmethod
-    async def login(db: AsyncSession, data: UserLogin, user_agent: str | None, ip: str | None) -> tuple[User, str, str]:
-        result = await db.execute(select(User).where(User.email == data.email.lower()))
-        user = result.scalar_one_or_none()
-        if not user or not user.hashed_password or not verify_password(data.password, user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        if user.is_banned:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
-
+    async def issue_session(
+        db: AsyncSession, user: User, user_agent: str | None, ip: str | None
+    ) -> tuple[User, str, str]:
         access = create_access_token(str(user.id), user.role.value)
         refresh, jti = create_refresh_token(str(user.id))
 
@@ -73,6 +75,20 @@ class AuthService:
         )
         user = user_result.scalar_one()
         return user, access, refresh
+
+    @staticmethod
+    async def login(db: AsyncSession, data: UserLogin, user_agent: str | None, ip: str | None) -> tuple[User, str, str]:
+        login_id = data.email.strip().lower()
+        result = await db.execute(
+            select(User).where((User.email == login_id) | (User.username == login_id))
+        )
+        user = result.scalar_one_or_none()
+        if not user or not user.hashed_password or not verify_password(data.password, user.hashed_password):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        if user.is_banned:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
+
+        return await AuthService.issue_session(db, user, user_agent, ip)
 
     @staticmethod
     async def refresh(db: AsyncSession, refresh_token: str) -> tuple[str, str]:
@@ -171,11 +187,12 @@ class AuthService:
         return user, access, refresh
 
     @staticmethod
-    async def request_password_reset(db: AsyncSession, email: str) -> None:
+    async def request_password_reset(db: AsyncSession, email: str) -> str | None:
+        """Create reset token. Returns reset URL when SMTP is off (local dev)."""
         result = await db.execute(select(User).where(User.email == email.lower()))
         user = result.scalar_one_or_none()
         if not user or not user.hashed_password or user.role == UserRole.GUEST:
-            return
+            return None
 
         raw_token = token_urlsafe(32)
         token = PasswordResetToken(
@@ -189,11 +206,12 @@ class AuthService:
 
         settings = get_settings()
         reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
-        await EmailService.send_email(
+        sent = await EmailService.send_email(
             user.email,
             "Reset your ChessMaster Pro password",
             f"Use this link to reset your password (expires in 1 hour):\n{reset_url}",
         )
+        return None if sent else reset_url
 
     @staticmethod
     async def reset_password(db: AsyncSession, token: str, new_password: str) -> None:
@@ -219,7 +237,8 @@ class AuthService:
         reset.used_at = now
 
     @staticmethod
-    async def request_email_verification(db: AsyncSession, user: User) -> None:
+    async def request_email_verification(db: AsyncSession, user: User) -> str | None:
+        """Create verification token. Returns verify URL when SMTP is off (local dev)."""
         if user.is_verified:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified")
         if user.role == UserRole.GUEST:
@@ -237,11 +256,12 @@ class AuthService:
 
         settings = get_settings()
         verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
-        await EmailService.send_email(
+        sent = await EmailService.send_email(
             user.email,
             "Verify your ChessMaster Pro email",
-            f"Confirm your email address:\n{verify_url}",
+            f"Confirm your email address (expires in 24 hours):\n{verify_url}",
         )
+        return None if sent else verify_url
 
     @staticmethod
     async def confirm_email_verification(db: AsyncSession, token: str) -> None:

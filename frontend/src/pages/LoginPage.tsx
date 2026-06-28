@@ -1,18 +1,40 @@
-import { FormEvent, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { FormEvent, useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { motion } from 'framer-motion'
 import { authApi, formatNetworkError } from '../services/api'
+import PasswordInput from '../components/PasswordInput'
 import { setCredentials, User } from '../store/authSlice'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [registeredMsg, setRegisteredMsg] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [guestLoading, setGuestLoading] = useState(false)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    const state = location.state as {
+      registered?: boolean
+      email?: string
+      passwordReset?: boolean
+      emailVerified?: boolean
+    } | null
+    if (state?.passwordReset) {
+      setRegisteredMsg('Password updated — sign in with your new password.')
+    } else if (state?.emailVerified) {
+      setRegisteredMsg('Email verified — sign in to continue.')
+    } else if (state?.registered) {
+      setRegisteredMsg('Account created — sign in with your email/username and password.')
+    }
+    if (state?.email) {
+      setEmail(state.email)
+    }
+  }, [location.state])
 
   const finishLogin = (data: { user: User; access_token: string; refresh_token: string }) => {
     dispatch(
@@ -30,7 +52,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const { data } = await authApi.login({ email, password })
+      const { data } = await authApi.login({ email: email.trim(), password })
       finishLogin(data)
     } catch (err: unknown) {
       setError(formatNetworkError(err, 'sign in') || 'Invalid email or password')
@@ -63,14 +85,20 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Sign in to continue playing</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          {registeredMsg && (
+            <div className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+              {registeredMsg}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div>
           )}
           <div>
-            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Email</label>
+            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Email or username</label>
             <input
-              type="email"
+              type="text"
               required
+              autoComplete="username"
               className="input-field"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -86,10 +114,9 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <input
-              type="password"
+            <PasswordInput
               required
-              className="input-field"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

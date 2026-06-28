@@ -54,6 +54,7 @@ async def get_public_profile(username: str, db: AsyncSession = Depends(get_db)):
         username=profile.user.username,
         avatar_url=profile.avatar_url,
         country=profile.country,
+        gender=profile.gender,
         biography=profile.biography,
         rating_bullet=profile.rating_bullet,
         rating_blitz=profile.rating_blitz,

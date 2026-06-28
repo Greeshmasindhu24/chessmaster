@@ -10,8 +10,10 @@ import { motion } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
 import { api, authApi, billingApi, formatNetworkError } from '../services/api'
 import { hideDummyBilling } from '../config/features'
+import { buyLabel } from '../config/products'
 import { gameSocket } from '../services/socket'
 import { setUser } from '../store/authSlice'
+import { useChessSounds } from '../hooks/useChessSounds'
 import type { RootState } from '../store'
 
 type Phase = 'lobby' | 'waiting' | 'playing' | 'finished'
@@ -47,6 +49,7 @@ export default function PlayOnlinePage() {
   const [chatInput, setChatInput] = useState('')
   const [drawOffered, setDrawOffered] = useState(false)
   const [upgradeTier, setUpgradeTier] = useState<TierInfo | null>(null)
+  const { playAfterMove, playKind } = useChessSounds()
   const chessRef = useRef(chess)
   const fenRef = useRef(fen)
   chessRef.current = chess
@@ -164,9 +167,10 @@ export default function PlayOnlinePage() {
       setChess(next)
       setFen(next.fen())
       updateStatus(next)
+      playAfterMove(next, move)
       return move
     },
-    [updateStatus],
+    [updateStatus, playAfterMove],
   )
 
   useEffect(() => {
@@ -214,6 +218,7 @@ export default function PlayOnlinePage() {
         if (data.result) {
           setStatus(`Game over: ${data.result}`)
           setPhase('finished')
+          playKind('gameover')
           refreshProfile()
         }
       }),
@@ -229,6 +234,7 @@ export default function PlayOnlinePage() {
       gameSocket.on('game_finished', (data) => {
         setStatus(`Game over: ${data.result}${data.reason ? ` (${data.reason})` : ''}`)
         setPhase('finished')
+        playKind('gameover')
         refreshProfile()
       }),
       gameSocket.on('chat_message', (data) => {
@@ -254,7 +260,7 @@ export default function PlayOnlinePage() {
       unsubs.forEach((off) => off())
       gameSocket.disconnect()
     }
-  }, [accessToken, applyFen, applyMove, resetChess, refreshProfile, selectedTierInfo])
+  }, [accessToken, applyFen, applyMove, resetChess, refreshProfile, selectedTierInfo, playKind])
 
   const createRoom = async () => {
     if (!selectedPreset || !requireUnlockedOrUpgrade()) return
@@ -408,7 +414,9 @@ export default function PlayOnlinePage() {
                 >
                   {locked ? '🔒 ' : ''}{p.label}
                   {tier && tier.price_cents > 0 && (
-                    <span className="ml-1 text-xs opacity-80">({tier.price_display})</span>
+                    <span className="ml-1 text-xs opacity-80">
+                      ({tier.price_one_time_display ?? `${tier.price_display} one-time`})
+                    </span>
                   )}
                 </button>
               )})}
@@ -416,7 +424,7 @@ export default function PlayOnlinePage() {
             <p className="mt-2 text-xs text-gray-500">
               {hideDummyBilling
                 ? 'Blitz 3+2 is free. Other time controls coming in a future update.'
-                : 'Blitz 3+2 is free. Other time controls require a one-time unlock.'}
+                : 'Blitz 3+2 is free. Other time controls are separate one-time purchases — buy any tier individually.'}
             </p>
           </div>
 
@@ -427,7 +435,7 @@ export default function PlayOnlinePage() {
                 onClick={() => setUpgradeTier(selectedTierInfo)}
                 className="btn-primary"
               >
-                Upgrade {selectedTierInfo.label} — {selectedTierInfo.price_display}
+                {buyLabel(selectedTierInfo.label, selectedTierInfo.price_cents)}
               </button>
             ) : (
               <>

@@ -80,16 +80,18 @@ Gap analysis and phased plan for publishing the Android app on Google Play.
 
 **Goal:** Improve conversion, retention, and compliance depth.
 
-| Task | Notes |
-|------|-------|
-| Custom app icon & splash | Replace Capacitor defaults |
-| Play In-App Billing | Wire AI/online tier unlocks to Play Billing Library |
-| Google Sign-In | OAuth + Play Console SHA-1 fingerprints |
-| Email verification flow | SMTP on Render or transactional email provider |
-| Account deletion | Required by Play policy — API + UI |
-| Data export | Optional but good for GDPR-style requests |
-| Crash reporting | Firebase Crashlytics or Sentry |
-| Beta track | Internal testing → closed testing → production |
+| Task | Status | Notes |
+|------|--------|-------|
+| Custom app icon & splash | Pending | Replace Capacitor defaults |
+| Play In-App Billing | **Deferred** | Skipped for now; `VITE_PLAY_MVP=true` hides dummy billing UI |
+| Google Sign-In | Pending | OAuth + Play Console SHA-1 fingerprints |
+| Email verification flow | **Done** | Register + Settings resend; `/verify-email` confirm; SMTP or dev `verify_url` in API |
+| Account deletion | **Done** | API + Settings UI (Phase 1) |
+| Board themes | **Done** | Classic, blue, brown, marble — synced to preferences |
+| Sound effects | **Done** | Move/capture/check/game-over tones on all play modes |
+| Data export | Pending | Optional but good for GDPR-style requests |
+| Crash reporting | Pending | Firebase Crashlytics or Sentry |
+| Beta track | Pending | Internal testing → closed testing → production |
 
 ---
 

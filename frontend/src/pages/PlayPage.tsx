@@ -5,8 +5,10 @@ import { motion } from 'framer-motion'
 import ClickChessboard from '../components/ClickChessboard'
 import MoveHistory from '../components/MoveHistory'
 import { cloneChess } from '../utils/chessDisplay'
+import { useChessSounds } from '../hooks/useChessSounds'
 
 export default function PlayPage() {
+  const { playAfterMove } = useChessSounds()
   const [game, setGame] = useState(new Chess())
   const [fen, setFen] = useState(game.fen())
   const [status, setStatus] = useState('White to move')
@@ -32,12 +34,13 @@ export default function PlayPage() {
         setFen(chess.fen())
         setGame(chess)
         updateStatus(chess)
+        playAfterMove(chess, move)
         return true
       } catch {
         return false
       }
     },
-    [game, updateStatus],
+    [game, updateStatus, playAfterMove],
   )
 
   const resetGame = () => {

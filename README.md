@@ -62,7 +62,7 @@ SQLite dev: tables are created automatically on backend start (`create_all`).
 | **Rankings / leaderboards** | Planned | Phase 4 |
 | **Friends & social** | Planned | Phase 4 |
 | **Notifications** | Planned | Model exists; API Phase 4 |
-| **Premium UI (boards, audio)** | In Progress | Theme toggle done; boards/audio Phase 2 |
+| **Premium UI (boards, audio)** | In Progress | Board themes + sound effects done (Phase 2); premium boards deferred |
 | **Admin dashboard** | Planned | Phase 5 |
 | **Security hardening** | In Progress | JWT sessions, rate limit; audit Phase 5 |
 | **Documentation** | In Progress | README + `/docs` OpenAPI |
@@ -232,7 +232,7 @@ Payload shape: `{ "event": "<event>", "data": { ... } }`
 | Phase | Focus |
 |-------|--------|
 | 1 | Auth foundation, profiles, preferences, settings UI |
-| 2 | Google OAuth, SMTP email, board themes, Socket.IO parity |
+| 2 | Google OAuth, SMTP email, board themes, sound effects (billing deferred) |
 | 3 | Stockfish analysis, puzzles, spectator mode |
 | 4 | Rankings, friends, notifications |
 | 5 | Admin panel, analytics, security audit |

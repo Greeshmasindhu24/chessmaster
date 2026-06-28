@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { Link, useLocation } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
+import { useEffect } from 'react'
 import { RootState } from '../store'
+import { setUser } from '../store/authSlice'
 import { authApi, gamesApi, healthApi } from '../services/api'
+import DevEmailLink from '../components/DevEmailLink'
+import { ageFromDateOfBirth, countryLabel, genderLabel } from '../config/profileFields'
 
 interface GameSummary {
   id: string
@@ -32,8 +36,12 @@ function outcomeLabel(game: GameSummary, userId: string): { text: string; classN
 }
 
 export default function DashboardPage() {
+  const dispatch = useDispatch()
+  const location = useLocation()
   const user = useSelector((s: RootState) => s.auth.user)
   const profile = user?.profile
+  const navState = location.state as { verifyUrl?: string | null; justRegistered?: boolean } | null
+  const devVerifyUrl = navState?.verifyUrl ?? ''
 
   const { data: health } = useQuery({
     queryKey: ['health'],
@@ -47,7 +55,16 @@ export default function DashboardPage() {
     refetchInterval: 15000,
   })
 
+  useEffect(() => {
+    if (freshUser) {
+      dispatch(setUser(freshUser))
+    }
+  }, [freshUser, dispatch])
+
+  const activeUser = freshUser ?? user
   const activeProfile = freshUser?.profile ?? profile
+  const showUnverifiedBanner =
+    activeUser && !activeUser.is_verified && activeUser.role !== 'guest'
 
   const { data: history = [] } = useQuery({
     queryKey: ['game-history'],
@@ -75,6 +92,32 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {showUnverifiedBanner && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200"
+        >
+          <p className="font-medium">Verify your email address</p>
+          <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-300/90">
+            {navState?.justRegistered
+              ? 'We sent a verification link to your inbox. Verify to unlock AI and online play.'
+              : 'Verify your email to unlock AI and online play.'}
+          </p>
+          {devVerifyUrl && (
+            <div className="mt-3">
+              <DevEmailLink label="Verification link:" url={devVerifyUrl} />
+            </div>
+          )}
+          <Link
+            to="/settings"
+            className="mt-2 inline-block text-xs font-medium text-emerald-700 underline hover:no-underline dark:text-emerald-400"
+          >
+            Open settings to resend
+          </Link>
+        </motion.div>
+      )}
+
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <h1 className="text-3xl font-bold">
           Welcome, <span className="text-emerald-400">{user?.username}</span>
@@ -99,6 +142,45 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="glass-panel p-6">
+          <h2 className="text-lg font-semibold">Your Profile</h2>
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Username</span>
+              <span>{activeUser?.username ?? '—'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Email</span>
+              <span className="truncate pl-4 text-right">{activeUser?.email ?? '—'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Age</span>
+              <span>
+                {activeProfile?.date_of_birth
+                  ? (ageFromDateOfBirth(activeProfile.date_of_birth) ?? '—')
+                  : '—'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Gender</span>
+              <span>{genderLabel(activeProfile?.gender)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Country</span>
+              <span>{countryLabel(activeProfile?.country)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Email verified</span>
+              <span className={activeUser?.is_verified ? 'text-emerald-400' : 'text-yellow-400'}>
+                {activeUser?.is_verified ? 'Yes' : 'Pending'}
+              </span>
+            </div>
+          </div>
+          <Link to="/settings" className="btn-secondary mt-4 inline-block text-sm">
+            Edit profile
+          </Link>
+        </div>
+
+        <div className="glass-panel p-6">
           <h2 className="text-lg font-semibold">Quick Play</h2>
           <p className="mt-2 text-sm text-gray-400">
             Play vs AI, practice locally, or find an online opponent
@@ -116,7 +198,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="glass-panel p-6">
+        <div className="glass-panel p-6 lg:col-span-2">
           <h2 className="text-lg font-semibold">System Status</h2>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between">

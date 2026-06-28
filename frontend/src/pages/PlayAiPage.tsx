@@ -21,6 +21,8 @@ import { cloneChess, applyUciMove } from '../utils/chessDisplay'
 import { authApi, billingApi, formatNetworkError, gamesApi } from '../services/api'
 
 import { hideDummyBilling } from '../config/features'
+import { buyLabel } from '../config/products'
+import { useChessSounds } from '../hooks/useChessSounds'
 
 import { setUser } from '../store/authSlice'
 
@@ -57,6 +59,8 @@ export default function PlayAiPage() {
   const [loading, setLoading] = useState(false)
 
   const [upgradeTier, setUpgradeTier] = useState<AiTierInfo | null>(null)
+
+  const { playAfterMove } = useChessSounds()
 
   const chessRef = useRef(chess)
 
@@ -250,6 +254,10 @@ export default function PlayAiPage() {
 
         setStatus('AI moved — your turn')
 
+        const history = start.history({ verbose: true })
+        const openingMove = history[history.length - 1]
+        if (openingMove) playAfterMove(start, openingMove)
+
       } else {
 
         const start = new Chess()
@@ -344,6 +352,8 @@ export default function PlayAiPage() {
 
       setStatus('AI is thinking...')
 
+      playAfterMove(board, move)
+
 
 
       gamesApi
@@ -357,6 +367,10 @@ export default function PlayAiPage() {
           if (data.ai_move?.uci) {
 
             applyUciMove(next, data.ai_move.uci)
+
+            const history = next.history({ verbose: true })
+            const aiMove = history[history.length - 1]
+            if (aiMove) playAfterMove(next, aiMove)
 
           }
 
@@ -388,7 +402,7 @@ export default function PlayAiPage() {
 
     },
 
-    [phase, gameId, updateStatus],
+    [phase, gameId, updateStatus, playAfterMove],
 
   )
 
@@ -534,7 +548,8 @@ export default function PlayAiPage() {
 
                           {locked && tier.requires_payment ? '🔒 ' : ''}
 
-                          {tier.price_display}
+                          {tier.price_one_time_display ??
+                            (tier.price_cents === 0 ? tier.price_display : `${tier.price_display} one-time`)}
 
                         </span>
 
@@ -544,7 +559,7 @@ export default function PlayAiPage() {
 
                       {locked && tier.requires_payment && !hideDummyBilling && (
 
-                        <span className="mt-1 block text-xs text-yellow-400/90">Tap to upgrade</span>
+                        <span className="mt-1 block text-xs text-yellow-400/90">Tap to buy one-time unlock</span>
 
                       )}
 
@@ -614,7 +629,7 @@ export default function PlayAiPage() {
 
             >
 
-              Upgrade to {selectedTier.label} — {selectedTier.price_display}
+              {buyLabel(selectedTier.label, selectedTier.price_cents)}
 
             </button>
 
@@ -712,7 +727,7 @@ export default function PlayAiPage() {
 
         <p className="text-sm text-gray-500">
 
-          Beginner is free. Intermediate, Advanced, and Expert require a one-time payment to unlock.
+          Beginner is free. Higher AI levels are separate one-time purchases — buy any tier individually.
 
           {userId ? '' : ' Log in to track stats and purchases.'}
 

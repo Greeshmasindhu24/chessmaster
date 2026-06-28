@@ -1,11 +1,9 @@
 import { Chessboard } from 'react-chessboard'
 import { Square } from 'chess.js'
+import { useSelector } from 'react-redux'
 import { useClickToMove } from '../hooks/useClickToMove'
-
-const BOARD_SQUARE_STYLES = {
-  customDarkSquareStyle: { backgroundColor: '#769656' },
-  customLightSquareStyle: { backgroundColor: '#eeeed2' },
-}
+import { boardSquareStyles } from '../config/boardThemes'
+import { RootState } from '../store'
 
 interface ClickChessboardProps {
   fen: string
@@ -24,6 +22,7 @@ export default function ClickChessboard({
   interactive = true,
   selectableColor,
 }: ClickChessboardProps) {
+  const boardTheme = useSelector((s: RootState) => s.settings.boardTheme)
   const { onSquareClick, customSquareStyles } = useClickToMove(fen, onMove, {
     interactive,
     selectableColor,
@@ -38,7 +37,7 @@ export default function ClickChessboard({
       autoPromoteToQueen
       onSquareClick={interactive ? onSquareClick : undefined}
       customSquareStyles={customSquareStyles}
-      {...BOARD_SQUARE_STYLES}
+      {...boardSquareStyles(boardTheme)}
     />
   )
 }

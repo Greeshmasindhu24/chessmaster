@@ -1,6 +1,7 @@
 ﻿import axios from 'axios'
 import { store } from '../store'
 import { logout, setCredentials } from '../store/authSlice'
+import type { Country, Gender } from '../config/profileFields'
 
 const rawApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? ''
 const API_URL = rawApiUrl
@@ -45,11 +46,14 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+const AUTH_NO_REFRESH_PATHS = ['/auth/login', '/auth/register', '/auth/guest', '/auth/refresh']
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    const isAuthEndpoint = AUTH_NO_REFRESH_PATHS.some((p) => String(original?.url ?? '').includes(p))
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       original._retry = true
       const refreshToken = store.getState().auth.refreshToken
       if (refreshToken) {
@@ -81,6 +85,9 @@ export interface RegisterData {
   email: string
   username: string
   password: string
+  date_of_birth: string
+  gender: Gender
+  country?: Country | null
 }
 
 export interface LoginData {
@@ -106,7 +113,6 @@ export const authApi = {
 
 export interface ProfileUpdateData {
   avatar_url?: string | null
-  country?: string | null
   biography?: string | null
 }
 

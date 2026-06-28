@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { billingApi, formatNetworkError } from '../services/api'
+import { buyLabel } from '../config/products'
 
 export interface TierInfo {
   id: string
@@ -8,6 +9,9 @@ export interface TierInfo {
   description: string
   price_cents: number
   price_display: string
+  price_one_time_display?: string
+  purchase_type?: 'one_time' | 'free'
+  google_play_product_id?: string | null
   level: number
   unlocked: boolean
   requires_payment: boolean
@@ -66,6 +70,15 @@ export default function UpgradeModal({ tier, product, open, onClose, onSuccess }
 
   if (!tier) return null
 
+  const oneTimePrice =
+    tier.price_one_time_display ??
+    (tier.price_cents === 0 ? 'Free' : `${tier.price_display} one-time`)
+  const productSuffix = product === 'ai' ? ' AI' : ' Online'
+  const buyButtonLabel = buyLabel(tier.label, tier.price_cents)
+  const modalTitle = tier.requires_payment
+    ? `Buy ${tier.label}${productSuffix} — ${oneTimePrice}`
+    : `Unlock ${tier.label}${productSuffix}`
+
   return (
     <AnimatePresence>
       {open && (
@@ -85,14 +98,14 @@ export default function UpgradeModal({ tier, product, open, onClose, onSuccess }
           >
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold">
-                  Unlock {tier.label}
-                  {product === 'ai' ? ' AI' : ' Online'}
-                </h2>
+                <h2 className="text-xl font-bold">{modalTitle}</h2>
                 <p className="mt-1 text-sm text-gray-400">{tier.description}</p>
+                {tier.requires_payment && (
+                  <p className="mt-2 text-xs text-gray-500">One-time purchase — unlocks this tier only.</p>
+                )}
               </div>
               <span className="rounded-lg bg-emerald-600/20 px-3 py-1 text-lg font-bold text-emerald-400">
-                {tier.price_display}
+                {oneTimePrice}
               </span>
             </div>
 
@@ -147,7 +160,7 @@ export default function UpgradeModal({ tier, product, open, onClose, onSuccess }
                   Cancel
                 </button>
                 <button type="submit" disabled={loading} className="btn-primary flex-1 py-2.5">
-                  {loading ? 'Processing...' : `Pay ${tier.price_display}`}
+                  {loading ? 'Processing...' : buyButtonLabel}
                 </button>
               </div>
             </form>

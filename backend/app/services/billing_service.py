@@ -7,81 +7,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AiTierPurchase, OnlineTierPurchase, User
-
-# --- AI tiers ---
-FREE_AI_TIER = "beginner"
-AI_VALID_TIERS = ("beginner", "intermediate", "advanced", "expert")
-
-AI_TIER_CATALOG: dict[str, dict] = {
-    "beginner": {
-        "label": "Beginner",
-        "description": "Makes occasional mistakes — free for everyone",
-        "price_cents": 0,
-        "level": 1,
-    },
-    "intermediate": {
-        "label": "Intermediate",
-        "description": "Solid club-level play",
-        "price_cents": 499,
-        "level": 2,
-    },
-    "advanced": {
-        "label": "Advanced",
-        "description": "Strong tactical play",
-        "price_cents": 999,
-        "level": 3,
-    },
-    "expert": {
-        "label": "Expert",
-        "description": "Best available engine strength",
-        "price_cents": 1499,
-        "level": 4,
-    },
-}
-
-# --- Online time-control tiers ---
-FREE_ONLINE_TIER = "blitz"
-ONLINE_VALID_TIERS = ("bullet", "blitz", "rapid", "classical")
-
-ONLINE_TIER_CATALOG: dict[str, dict] = {
-    "bullet": {
-        "label": "Bullet 1+0",
-        "description": "Ultra-fast 1 minute games",
-        "price_cents": 499,
-        "level": 1,
-        "time_control_seconds": 60,
-        "increment_seconds": 0,
-    },
-    "blitz": {
-        "label": "Blitz 3+2",
-        "description": "Quick blitz — free for everyone",
-        "price_cents": 0,
-        "level": 2,
-        "time_control_seconds": 180,
-        "increment_seconds": 2,
-    },
-    "rapid": {
-        "label": "Rapid 10+0",
-        "description": "Standard rapid time control",
-        "price_cents": 999,
-        "level": 3,
-        "time_control_seconds": 600,
-        "increment_seconds": 0,
-    },
-    "classical": {
-        "label": "Classical 30+0",
-        "description": "Long classical games",
-        "price_cents": 1499,
-        "level": 4,
-        "time_control_seconds": 1800,
-        "increment_seconds": 0,
-    },
-}
-
-ONLINE_PRESET_TO_TIER: dict[tuple[int, int], str] = {
-    (meta["time_control_seconds"], meta["increment_seconds"]): tier_id
-    for tier_id, meta in ONLINE_TIER_CATALOG.items()
-}
+from app.services.product_catalog import (
+    AI_TIER_CATALOG,
+    AI_VALID_TIERS,
+    FREE_AI_TIER,
+    FREE_ONLINE_TIER,
+    ONLINE_PRESET_TO_TIER,
+    ONLINE_TIER_CATALOG,
+    ONLINE_VALID_TIERS,
+)
 
 
 class BillingService:
@@ -90,6 +24,12 @@ class BillingService:
         if cents == 0:
             return "Free"
         return f"${cents / 100:.2f}"
+
+    @staticmethod
+    def format_one_time_price(cents: int) -> str:
+        if cents == 0:
+            return "Free"
+        return f"{BillingService.format_price(cents)} one-time"
 
     @staticmethod
     def _validate_dummy_card(card_number: str, expiry: str, cvc: str, cardholder_name: str) -> str:
@@ -108,15 +48,19 @@ class BillingService:
 
     @staticmethod
     def _tier_payload(tier_id: str, meta: dict, unlocked: set[str]) -> dict:
+        price_cents = meta["price_cents"]
         return {
             "id": tier_id,
             "label": meta["label"],
             "description": meta["description"],
-            "price_cents": meta["price_cents"],
-            "price_display": BillingService.format_price(meta["price_cents"]),
+            "price_cents": price_cents,
+            "price_display": BillingService.format_price(price_cents),
+            "price_one_time_display": BillingService.format_one_time_price(price_cents),
+            "purchase_type": "one_time" if price_cents > 0 else "free",
+            "google_play_product_id": meta.get("google_play_product_id"),
             "level": meta["level"],
             "unlocked": tier_id in unlocked,
-            "requires_payment": meta["price_cents"] > 0,
+            "requires_payment": price_cents > 0,
         }
 
     # --- AI ---

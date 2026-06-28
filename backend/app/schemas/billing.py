@@ -7,6 +7,9 @@ class AiTierResponse(BaseModel):
     description: str
     price_cents: int
     price_display: str
+    price_one_time_display: str
+    purchase_type: str
+    google_play_product_id: str | None = None
     level: int
     unlocked: bool
     requires_payment: bool

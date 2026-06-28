@@ -1,9 +1,11 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.auth import Country, Gender
+
 
 class ProfileUpdateRequest(BaseModel):
+    """Demographics (age, gender, country) are set at registration only."""
     avatar_url: str | None = Field(default=None, max_length=512)
-    country: str | None = Field(default=None, min_length=2, max_length=2, pattern=r"^[A-Z]{2}$")
     biography: str | None = Field(default=None, max_length=2000)
 
 
@@ -12,7 +14,8 @@ class PublicProfileResponse(BaseModel):
 
     username: str
     avatar_url: str | None = None
-    country: str | None = None
+    country: Country | None = None
+    gender: Gender | None = None
     biography: str | None = None
     rating_bullet: int
     rating_blitz: int

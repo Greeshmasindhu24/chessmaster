@@ -1,9 +1,10 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -24,6 +25,19 @@ class UserRole(str, enum.Enum):
     GUEST = "guest"
     PLAYER = "player"
     ADMIN = "admin"
+
+
+class Gender(str, enum.Enum):
+    MALE = "male"
+    FEMALE = "female"
+    NON_BINARY = "non_binary"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say"
+
+
+class Country(str, enum.Enum):
+    INDIAN = "indian"
+    OUTSIDE_INDIAN = "outside_indian"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say"
 
 
 class User(Base):
@@ -56,7 +70,9 @@ class Profile(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    country: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    country: Mapped[Country | None] = mapped_column(Enum(Country, native_enum=False), nullable=True)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    gender: Mapped[Gender | None] = mapped_column(Enum(Gender, native_enum=False), nullable=True)
     biography: Mapped[str | None] = mapped_column(Text, nullable=True)
     rating_bullet: Mapped[int] = mapped_column(Integer, default=1200)
     rating_blitz: Mapped[int] = mapped_column(Integer, default=1200)
