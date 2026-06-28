@@ -1,9 +1,12 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { RootState } from '../store'
-import { logout } from '../store/authSlice'
+import { logout, setUser } from '../store/authSlice'
 import { authApi } from '../services/api'
+import EmailVerificationBadge from './EmailVerificationBadge'
 
 export default function Layout() {
   const { isAuthenticated, user, refreshToken } = useSelector((s: RootState) => s.auth)
@@ -11,6 +14,21 @@ export default function Layout() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const isDark = theme === 'dark'
+
+  const { data: freshUser } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => authApi.me().then((r) => r.data),
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  })
+
+  useEffect(() => {
+    if (freshUser) {
+      dispatch(setUser(freshUser))
+    }
+  }, [freshUser, dispatch])
+
+  const activeUser = freshUser ?? user
 
   const handleLogout = async () => {
     if (refreshToken) {
@@ -80,7 +98,8 @@ export default function Layout() {
                 >
                   Settings
                 </Link>
-                <span className="text-sm text-emerald-600 dark:text-emerald-400">{user?.username}</span>
+                <EmailVerificationBadge user={activeUser} variant="nav" />
+                <span className="text-sm text-emerald-600 dark:text-emerald-400">{activeUser?.username}</span>
                 <button onClick={handleLogout} className="btn-secondary py-2 text-sm">
                   Logout
                 </button>

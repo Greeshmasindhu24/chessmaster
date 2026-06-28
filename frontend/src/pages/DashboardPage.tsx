@@ -96,27 +96,28 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200"
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-800 dark:text-amber-200"
         >
-          <p className="font-medium">Verify your email address</p>
-          <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-300/90">
-            {devVerifyUrl
-              ? 'Email was not sent — SMTP is not configured on the server. Use the link below to verify.'
-              : navState?.justRegistered
-                ? 'We sent a verification link to your inbox. Check spam if it does not arrive within a few minutes.'
-                : 'Verify your email to unlock AI and online play.'}
-          </p>
-          {devVerifyUrl && (
-            <div className="mt-3">
-              <DevEmailLink label="Verification link:" url={devVerifyUrl} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="font-semibold">Verify your email address</p>
+              <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-300/90">
+                {devVerifyUrl
+                  ? 'Email was not sent — SMTP is not configured on the server. Use the link below to verify.'
+                  : navState?.justRegistered
+                    ? 'We sent a verification link to your inbox. Check spam if it does not arrive within a few minutes.'
+                    : 'AI and online play require a verified email. Check your inbox or resend the link from settings.'}
+              </p>
+              {devVerifyUrl && (
+                <div className="mt-3">
+                  <DevEmailLink label="Verification link:" url={devVerifyUrl} />
+                </div>
+              )}
             </div>
-          )}
-          <Link
-            to="/settings"
-            className="mt-2 inline-block text-xs font-medium text-emerald-700 underline hover:no-underline dark:text-emerald-400"
-          >
-            Open settings to resend
-          </Link>
+            <Link to="/settings" className="btn-primary shrink-0 py-2 text-sm">
+              Verify now
+            </Link>
+          </div>
         </motion.div>
       )}
 

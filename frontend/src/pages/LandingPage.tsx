@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
+import EmailVerificationBadge from '../components/EmailVerificationBadge'
 
 const features = [
   {
@@ -50,10 +51,14 @@ function ChessBoardPattern() {
 }
 
 export default function LandingPage() {
-  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated)
+  const { isAuthenticated, user } = useSelector((s: RootState) => s.auth)
 
   return (
     <div className="relative space-y-24 overflow-hidden pb-8">
+      {isAuthenticated && user && !user.is_verified && user.role !== 'guest' && (
+        <EmailVerificationBadge user={user} variant="strip" />
+      )}
+
       {/* Hero */}
       <section className="relative -mx-4 overflow-hidden rounded-3xl px-4 py-20 sm:-mx-0 sm:px-8 md:py-28">
         <ChessBoardPattern />
