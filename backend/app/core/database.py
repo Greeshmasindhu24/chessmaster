@@ -16,6 +16,9 @@ else:
         pool_size=10,
         max_overflow=20,
     )
+    pg_connect_args = settings.postgres_connect_args
+    if pg_connect_args:
+        _engine_kwargs["connect_args"] = pg_connect_args
 
 engine = create_async_engine(settings.resolved_database_url, **_engine_kwargs)
 

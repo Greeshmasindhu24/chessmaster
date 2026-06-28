@@ -71,7 +71,7 @@ Render **free tier allows only one PostgreSQL database per account**. If Bluepri
 
 | Variable | Value |
 |----------|---------|
-| `DATABASE_URL` | Your Neon connection string (from Step 2) |
+| `DATABASE_URL` | Your Neon or Render Postgres connection string (may include `?sslmode=require` — the API strips it and enables SSL automatically) |
 | `FRONTEND_URL` | `https://chessmaster-web.onrender.com` |
 | `CORS_ORIGINS` | `["https://chessmaster-web.onrender.com"]` |
 
@@ -191,6 +191,7 @@ Register an account on the live site and test AI + online play.
 - **WebSockets:** Online play uses `wss://your-api.onrender.com/api/v1/ws/game` â€” works on Render web services.
 - **Redis:** Optional; default is in-memory cache (`REDIS_ENABLED=false`).
 - **Secrets:** Never commit `.env` files. Set `SECRET_KEY` in Render only.
+- **DATABASE_URL / SSL:** Cloud Postgres (Render, Neon, Heroku) often ships URLs like `postgresql://user:pass@host/db?sslmode=require`. Paste that value as-is on **chessmaster-api** — the backend converts `sslmode=require` to asyncpg's `ssl=True` at startup. Local Postgres without SSL can omit the query string.
 
 ## Billing tiers (AI + Online)
 
@@ -208,6 +209,7 @@ Dummy test card: `4242 4242 4242 4242`, expiry `12/30`, CVC `123`.
 | Frontend can't reach API | Set `VITE_API_URL` on static site and redeploy |
 | CORS errors | Set `CORS_ORIGINS` and `FRONTEND_URL` on API to your static URL |
 | 502 on API | Check logs; confirm PostgreSQL is linked |
+| `connect() got an unexpected keyword argument 'sslmode'` | Fixed in app — redeploy latest commit; keep `?sslmode=require` on `DATABASE_URL` if your provider requires SSL |
 | WebSocket fails | Use `https://` frontend with `VITE_API_URL=https://...` (not localhost) |
 
 

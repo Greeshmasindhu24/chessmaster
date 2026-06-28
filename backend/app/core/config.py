@@ -1,8 +1,66 @@
-from functools import lru_cache
+import ssl
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
+
+# libpq URL query params that asyncpg.connect() does not accept
+_ASYNCPG_UNSUPPORTED_QUERY_KEYS = frozenset(
+    {
+        "sslmode",
+        "sslcert",
+        "sslkey",
+        "sslrootcert",
+        "sslcrl",
+        "channel_binding",
+        "options",
+        "target_session_attrs",
+    }
+)
+
+
+def _ssl_connect_arg(sslmode: str | None) -> dict:
+    """Map libpq sslmode to asyncpg ``ssl`` connect_arg."""
+    if not sslmode:
+        return {}
+    mode = sslmode.lower()
+    if mode == "disable":
+        return {"ssl": False}
+    if mode in ("require", "prefer", "allow"):
+        return {"ssl": True}
+    if mode == "verify-ca":
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        return {"ssl": ctx}
+    if mode == "verify-full":
+        return {"ssl": ssl.create_default_context()}
+    return {"ssl": True}
+
+
+def normalize_postgres_url(url: str) -> tuple[str, dict]:
+    """
+    Ensure asyncpg driver URL and strip libpq-only query params.
+
+    Render / Neon / Heroku often append ``?sslmode=require``; asyncpg expects
+    ``ssl=True`` via connect_args instead.
+    """
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if not url.startswith("postgresql+asyncpg://"):
+        return url, {}
+
+    parsed = make_url(url)
+    query = dict(parsed.query)
+    sslmode = query.pop("sslmode", None)
+    for key in list(query):
+        if key in _ASYNCPG_UNSUPPORTED_QUERY_KEYS:
+            query.pop(key)
+
+    connect_args = _ssl_connect_arg(sslmode)
+    cleaned = parsed.set(query=query).render_as_string(hide_password=False)
+    return cleaned, connect_args
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -68,16 +126,16 @@ class Settings(BaseSettings):
     STOCKFISH_PATH: str = "stockfish/stockfish.exe"
     RATE_LIMIT: str = "100/minute"
 
+    @cached_property
+    def _postgres_url_and_connect_args(self) -> tuple[str, dict]:
+        return normalize_postgres_url(self.DATABASE_URL)
+
     @property
     def resolved_database_url(self) -> str:
         if self.SQLITE_DATABASE_URL.strip():
             url = self.SQLITE_DATABASE_URL.strip()
         else:
-            url = self.DATABASE_URL
-
-        # Render / Heroku provide postgresql:// — async SQLAlchemy needs asyncpg driver
-        if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            url = self._postgres_url_and_connect_args[0]
 
         if url.startswith("sqlite") and ":///" in url:
             db_path = url.split(":///", 1)[1]
@@ -85,6 +143,12 @@ class Settings(BaseSettings):
                 abs_path = (PROJECT_ROOT / db_path).resolve()
                 url = f"sqlite+aiosqlite:///{abs_path.as_posix()}"
         return url
+
+    @property
+    def postgres_connect_args(self) -> dict:
+        if self.uses_sqlite:
+            return {}
+        return self._postgres_url_and_connect_args[1]
 
     @property
     def uses_sqlite(self) -> bool:
