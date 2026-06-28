@@ -33,7 +33,9 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
     result = await db.execute(
-        select(User).options(selectinload(User.profile)).where(User.id == UUID(user_id))
+        select(User)
+        .options(selectinload(User.profile), selectinload(User.preferences))
+        .where(User.id == UUID(user_id))
     )
     user = result.scalar_one_or_none()
     if not user or not user.is_active or user.is_banned:

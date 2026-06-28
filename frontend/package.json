@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && npx cap sync android",
+    "android:build": "npm run cap:sync && cd android && .\\gradlew.bat bundleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
     "@reduxjs/toolkit": "^2.5.0",
     "@tanstack/react-query": "^5.62.8",
     "axios": "^1.7.9",
@@ -23,6 +26,8 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
     "@eslint/js": "^9.17.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

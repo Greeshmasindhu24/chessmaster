@@ -7,14 +7,14 @@ This guide covers pushing to GitHub and going live on [Render](https://render.co
 1. Create a [GitHub](https://github.com) account (if needed).
 2. Create a [Render](https://render.com) account and connect GitHub.
 
-## Step 1 — Push code to GitHub
+## Step 1 â€” Push code to GitHub
 
 From PowerShell, in your repo root (`GNAMAMAI` or `ChessMasterPro`):
 
 ```powershell
 cd F:\SindhuReddy\GNAMAMAI
 
-# First time only — initialize if not already a git repo with remote
+# First time only â€” initialize if not already a git repo with remote
 git status
 
 # Stage ChessMaster Pro (never commit secrets)
@@ -31,7 +31,7 @@ git status
 git commit -m "Add ChessMaster Pro with AI, online play, and billing"
 
 # Create repo on GitHub (replace YOUR_USER and REPO_NAME)
-# Then add remote — first time only:
+# Then add remote â€” first time only:
 git remote add origin https://github.com/YOUR_USER/REPO_NAME.git
 
 # Push
@@ -47,36 +47,65 @@ git commit -m "Update ChessMaster Pro for Render deployment"
 git push origin main
 ```
 
-## Step 2 — Deploy on Render (Blueprint)
+## Step 2 â€” Database (required â€” Render free = 1 DB only)
 
-1. Open [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**.
+Render **free tier allows only one PostgreSQL database per account**. If Blueprint fails with  
+`cannot have more than one active free tier database`, use **Neon** (free) instead:
+
+1. Go to [neon.tech](https://neon.tech) â†’ sign up â†’ **New Project** â†’ name it `chessmaster`
+2. Copy the **connection string** (looks like `postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require`)
+3. You will paste this as `DATABASE_URL` on **chessmaster-api** in Render (Step 3)
+
+**Alternative:** Delete an unused free Postgres in [Render Dashboard â†’ Databases](https://dashboard.render.com) if you don't need it, then redeploy the Blueprint with a database block (older `render.yaml`).
+
+## Step 3 â€” Deploy on Render (Blueprint)
+
+1. Open [Render Dashboard](https://dashboard.render.com) â†’ **New** â†’ **Blueprint**.
 2. Connect your GitHub repo.
 3. If the repo root is `GNAMAMAI`, set **Root Directory** to `ChessMasterPro` when prompted (or edit paths in `render.yaml`).
-4. Render reads `render.yaml` and creates:
-   - **chessmaster-db** — PostgreSQL (free tier)
-   - **chessmaster-api** — FastAPI backend (Docker)
-   - **chessmaster-web** — React static frontend
+4. Render creates **chessmaster-api** and **chessmaster-web** (no database â€” you add `DATABASE_URL` manually).
 
-5. After the first deploy, set these **environment variables** manually:
+5. Set **environment variables**:
 
 ### chessmaster-api
 
-| Variable | Example |
+| Variable | Value |
 |----------|---------|
+| `DATABASE_URL` | Your Neon connection string (from Step 2) |
 | `FRONTEND_URL` | `https://chessmaster-web.onrender.com` |
 | `CORS_ORIGINS` | `["https://chessmaster-web.onrender.com"]` |
 
-(`DATABASE_URL`, `SECRET_KEY`, `REDIS_ENABLED` come from the blueprint.)
+(`SECRET_KEY`, `REDIS_ENABLED` come from the blueprint.)
 
 ### chessmaster-web
 
-| Variable | Example |
+| Variable | Value |
 |----------|---------|
 | `VITE_API_URL` | `https://chessmaster-api.onrender.com` |
 
-6. **Redeploy** both services after setting env vars (frontend must rebuild with `VITE_API_URL`).
+6. **Redeploy** both services after setting env vars (especially `DATABASE_URL` and `VITE_API_URL`).
 
-## Step 3 — Open your live app
+## Step 3b — Database migrations (Neon / PostgreSQL)
+
+On first deploy (or after Phase 1 auth/profile changes), apply SQL migrations against your production database.
+
+**Option A — Neon SQL Editor** (easiest):
+
+1. Open your Neon project → **SQL Editor**.
+2. Run the contents of `database/migrations/001_initial.sql` (skip if tables already exist from `create_all`).
+3. Run `database/migrations/002_phase1_foundation.sql` (idempotent — safe to re-run).
+
+**Option B — `psql` from your PC:**
+
+```powershell
+cd F:\SindhuReddy\GNAMAMAI\ChessMasterPro
+psql "postgresql://user@ep-xxx.neon.tech/neondb?sslmode=require" -f database\migrations\001_initial.sql
+psql "postgresql://user@ep-xxx.neon.tech/neondb?sslmode=require" -f database\migrations\002_phase1_foundation.sql
+```
+
+After migrations, restart **chessmaster-api** and confirm `/api/v1/health` is healthy.
+
+## Step 4 â€” Open your live app
 
 - **Frontend:** `https://chessmaster-web.onrender.com`
 - **API docs:** `https://chessmaster-api.onrender.com/docs`
@@ -86,24 +115,24 @@ Register an account on the live site and test AI + online play.
 
 ## Manual deploy (without Blueprint)
 
-### Backend — Web Service
+### Backend â€” Web Service
 
 - **Root Directory:** `ChessMasterPro/backend` (or `backend` if repo root is ChessMasterPro)
 - **Runtime:** Docker
 - **Health check:** `/api/v1/health`
 - Add PostgreSQL from Render dashboard and link `DATABASE_URL`.
 
-### Frontend — Static Site
+### Frontend â€” Static Site
 
 - **Root Directory:** `ChessMasterPro/frontend`
 - **Build:** `npm ci && npm run build`
 - **Publish directory:** `dist`
-- **Rewrite rule:** `/*` → `/index.html` (SPA routing)
+- **Rewrite rule:** `/*` â†’ `/index.html` (SPA routing)
 
 ## Notes
 
-- **Free tier:** Services spin down after inactivity; first load may take 30–60 seconds.
-- **WebSockets:** Online play uses `wss://your-api.onrender.com/api/v1/ws/game` — works on Render web services.
+- **Free tier:** Services spin down after inactivity; first load may take 30â€“60 seconds.
+- **WebSockets:** Online play uses `wss://your-api.onrender.com/api/v1/ws/game` â€” works on Render web services.
 - **Redis:** Optional; default is in-memory cache (`REDIS_ENABLED=false`).
 - **Secrets:** Never commit `.env` files. Set `SECRET_KEY` in Render only.
 

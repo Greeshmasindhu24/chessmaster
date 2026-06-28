@@ -36,3 +36,9 @@ postgres_data/
 # Local dev (SQLite)
 data/
 *.db
+
+# Local production env
+.env.production
+frontend/.env.production
+*.tsbuildinfo
+

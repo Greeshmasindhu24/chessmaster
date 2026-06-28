@@ -20,6 +20,8 @@ import { cloneChess, applyUciMove } from '../utils/chessDisplay'
 
 import { authApi, billingApi, formatNetworkError, gamesApi } from '../services/api'
 
+import { hideDummyBilling } from '../config/features'
+
 import { setUser } from '../store/authSlice'
 
 import type { RootState } from '../store'
@@ -188,6 +190,14 @@ export default function PlayAiPage() {
 
     }
 
+    if (hideDummyBilling) {
+
+      setStatus('Premium AI levels coming soon')
+
+      return
+
+    }
+
     setUpgradeTier(tier)
 
   }
@@ -198,7 +208,15 @@ export default function PlayAiPage() {
 
     if (!isSelectedUnlocked) {
 
-      if (selectedTier) setUpgradeTier(selectedTier)
+      if (hideDummyBilling) {
+
+        setStatus('Premium AI levels coming soon')
+
+      } else if (selectedTier) {
+
+        setUpgradeTier(selectedTier)
+
+      }
 
       return
 
@@ -250,11 +268,15 @@ export default function PlayAiPage() {
 
       const axiosErr = err as { response?: { status?: number } }
 
-      if (axiosErr.response?.status === 402 && selectedTier) {
+      if (!hideDummyBilling && axiosErr.response?.status === 402 && selectedTier) {
 
         setUpgradeTier(selectedTier)
 
         setStatus('Payment required for this level')
+
+      } else if (hideDummyBilling && axiosErr.response?.status === 402) {
+
+        setStatus('Premium AI levels coming soon')
 
       } else {
 
@@ -404,6 +426,7 @@ export default function PlayAiPage() {
 
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-4xl">
 
+      {!hideDummyBilling && (
       <UpgradeModal
 
         tier={upgradeTier}
@@ -425,6 +448,7 @@ export default function PlayAiPage() {
         }}
 
       />
+      )}
 
 
 
@@ -518,7 +542,7 @@ export default function PlayAiPage() {
 
                       <span className="mt-0.5 block text-xs opacity-80">{tier.description}</span>
 
-                      {locked && tier.requires_payment && (
+                      {locked && tier.requires_payment && !hideDummyBilling && (
 
                         <span className="mt-1 block text-xs text-yellow-400/90">Tap to upgrade</span>
 
@@ -578,7 +602,7 @@ export default function PlayAiPage() {
 
 
 
-          {!isSelectedUnlocked && selectedTier?.requires_payment ? (
+          {!hideDummyBilling && !isSelectedUnlocked && selectedTier?.requires_payment ? (
 
             <button
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CHESSMASTER PRO</string>
+    <string name="title_activity_main">CHESSMASTER PRO</string>
+    <string name="package_name">com.Greeshma.ChessMaster.Pro</string>
+    <string name="custom_url_scheme">com.Greeshma.ChessMaster.Pro</string>
+</resources>

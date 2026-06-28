@@ -91,8 +91,38 @@ export interface LoginData {
 export const authApi = {
   register: (data: RegisterData) => api.post('/auth/register', data),
   login: (data: LoginData) => api.post('/auth/login', data),
+  guestLogin: () => api.post('/auth/guest'),
   me: () => api.get('/auth/me'),
   logout: (refreshToken: string) => api.post('/auth/logout', { refresh_token: refreshToken }),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, new_password: string) =>
+    api.post('/auth/reset-password', { token, new_password }),
+  requestEmailVerification: () => api.post('/auth/verify-email/request'),
+  confirmEmailVerification: (token: string) =>
+    api.post('/auth/verify-email/confirm', { token }),
+  googleOAuthStatus: () => api.get('/auth/google'),
+  deleteAccount: () => api.delete('/auth/account'),
+}
+
+export interface ProfileUpdateData {
+  avatar_url?: string | null
+  country?: string | null
+  biography?: string | null
+}
+
+export interface PreferencesData {
+  theme?: 'dark' | 'light'
+  board_theme?: string
+  sound_enabled?: boolean
+  move_confirmation?: boolean
+}
+
+export const profileApi = {
+  getProfile: () => api.get('/users/me/profile'),
+  updateProfile: (data: ProfileUpdateData) => api.patch('/users/me/profile', data),
+  getPreferences: () => api.get('/users/me/preferences'),
+  updatePreferences: (data: PreferencesData) => api.patch('/users/me/preferences', data),
+  getPublicProfile: (username: string) => api.get(`/users/${username}`),
 }
 
 export const healthApi = {

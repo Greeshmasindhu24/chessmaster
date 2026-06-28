@@ -16,7 +16,58 @@ ChessMasterPro/
 └── docker-compose.yml  # Optional — Docker path (requires WSL 2 on Windows)
 ```
 
-## Phase 2 (Current)
+## Phase 1 Foundation (Current)
+
+Phase 1 extends auth, profiles, preferences, settings UI, and Play Store MVP scaffolding. Phase 2 multiplayer (WebSockets, matchmaking) remains in place.
+
+**Android / Play Store:** See [docs/PLAY_STORE.md](docs/PLAY_STORE.md) for AAB build, signing, and submission steps.
+
+### New in Phase 1
+
+| Area | Endpoints / UI |
+|------|----------------|
+| Auth | Guest login, forgot/reset password (scaffold), email verify (scaffold), Google OAuth stub |
+| Profile | `GET/PATCH /users/me/profile`, `GET /users/{username}` |
+| Preferences | `GET/PATCH /users/me/preferences` (theme, board, sound flags) |
+| Frontend | `/settings`, dark/light theme toggle, forgot/reset password pages |
+
+Apply PostgreSQL migration on Render (after `001_initial.sql`):
+
+```bash
+psql $DATABASE_URL -f database/migrations/002_phase1_foundation.sql
+```
+
+SQLite dev: tables are created automatically on backend start (`create_all`).
+
+## Premium Platform Roadmap
+
+| Spec section | Status | Notes |
+|--------------|--------|-------|
+| **Auth — email/password + JWT** | Done | Register, login, refresh, logout, `/auth/me` |
+| **Auth — guest accounts** | Done | `POST /auth/guest` |
+| **Auth — forgot / reset password** | In Progress | API + UI; email send when SMTP configured |
+| **Auth — email verification** | In Progress | Token tables + API; SMTP wiring Phase 2 |
+| **Auth — Google OAuth** | Planned | Stub at `/auth/google`; callback Phase 2 |
+| **User profiles (ELO, stats, avatar)** | Done | Profile model + PATCH API + dashboard stats |
+| **Settings & theme (dark/light)** | Done | `/settings`, Redux + DB sync |
+| **Gameplay — local 2P board** | Done | `/play` |
+| **Gameplay — vs AI** | Done | `/play/ai`, Stockfish optional |
+| **Gameplay — full rules** | In Progress | python-chess validation online; expand local |
+| **Multiplayer — WebSocket** | Done | Matchmaking, rooms, chat, draw/resign |
+| **Multiplayer — spectator** | Planned | Phase 3 |
+| **Clock modes** | In Progress | Time controls in online games |
+| **Game history / PGN** | In Progress | REST history + DB persistence |
+| **Analysis (Stockfish)** | Planned | Phase 3 |
+| **Daily puzzles** | Planned | Phase 3 |
+| **Rankings / leaderboards** | Planned | Phase 4 |
+| **Friends & social** | Planned | Phase 4 |
+| **Notifications** | Planned | Model exists; API Phase 4 |
+| **Premium UI (boards, audio)** | In Progress | Theme toggle done; boards/audio Phase 2 |
+| **Admin dashboard** | Planned | Phase 5 |
+| **Security hardening** | In Progress | JWT sessions, rate limit; audit Phase 5 |
+| **Documentation** | In Progress | README + `/docs` OpenAPI |
+
+## Phase 2 — Multiplayer & Analysis (Next)
 
 - Real-time multiplayer via native WebSockets
 - Game state cache (Redis in production, in-memory for local dev)
@@ -65,7 +116,7 @@ Or use the `.bat` wrappers: `run_backend.bat` and `run_frontend.bat`.
 | Cache     | In-memory | Redis / Memurai |
 | Stockfish | Not required yet | `stockfish/stockfish.exe` |
 
-Tables are created automatically on first backend start (`SQLAlchemy create_all`). For PostgreSQL, you can also apply `database/migrations/001_initial.sql`.
+Tables are created automatically on first backend start (`SQLAlchemy create_all`). For PostgreSQL on Render, apply migrations in order: `001_initial.sql`, then `002_phase1_foundation.sql`.
 
 ### Environment (.env)
 
@@ -102,18 +153,35 @@ docker compose up --build -d
 
 ## API Endpoints
 
-### Phase 1 — Auth & Health
+### Auth & Health
 
-| Method | Endpoint              | Description        |
-|--------|-----------------------|--------------------|
-| GET    | /api/v1/health        | Health check       |
-| POST   | /api/v1/auth/register | Register user      |
-| POST   | /api/v1/auth/login    | Login (JWT)        |
-| POST   | /api/v1/auth/refresh  | Refresh token      |
-| POST   | /api/v1/auth/logout   | Logout             |
-| GET    | /api/v1/auth/me       | Current user       |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/v1/health | Health check |
+| POST | /api/v1/auth/register | Register user |
+| POST | /api/v1/auth/login | Login (JWT) |
+| POST | /api/v1/auth/guest | Guest account |
+| POST | /api/v1/auth/refresh | Refresh token |
+| POST | /api/v1/auth/logout | Logout |
+| GET | /api/v1/auth/me | Current user |
+| DELETE | /api/v1/auth/account | Delete account (JWT) |
+| POST | /api/v1/auth/forgot-password | Request reset link |
+| POST | /api/v1/auth/reset-password | Set new password |
+| POST | /api/v1/auth/verify-email/request | Send verify email (JWT) |
+| POST | /api/v1/auth/verify-email/confirm | Confirm email token |
+| GET | /api/v1/auth/google | Google OAuth stub |
 
-### Phase 2 — Games (JWT required)
+### Users & Preferences
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/v1/users/me/profile | Your profile |
+| PATCH | /api/v1/users/me/profile | Update avatar, country, bio |
+| GET | /api/v1/users/me/preferences | Theme & UI preferences |
+| PATCH | /api/v1/users/me/preferences | Update preferences |
+| GET | /api/v1/users/{username} | Public profile |
+
+### Games (JWT required)
 
 | Method | Endpoint              | Description                    |
 |--------|-----------------------|--------------------------------|
@@ -159,14 +227,17 @@ Payload shape: `{ "event": "<event>", "data": { ... } }`
 | chat_message   | In-game chat                             |
 | error          | Validation or auth error                 |
 
-## Roadmap
+## Development Phases (Summary)
 
-| Phase | Features                                              |
-|-------|-------------------------------------------------------|
-| 2     | WebSocket multiplayer, matchmaking, game persistence  |
-| 3     | Stockfish AI, game analysis, puzzles                  |
-| 4     | Tournaments, friends, chat, notifications             |
-| 5     | Admin panel, analytics, Google OAuth, email verify    |
+| Phase | Focus |
+|-------|--------|
+| 1 | Auth foundation, profiles, preferences, settings UI |
+| 2 | Google OAuth, SMTP email, board themes, Socket.IO parity |
+| 3 | Stockfish analysis, puzzles, spectator mode |
+| 4 | Rankings, friends, notifications |
+| 5 | Admin panel, analytics, security audit |
+
+See **Premium Platform Roadmap** above for per-feature status.
 
 ## Tech Stack
 

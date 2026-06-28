@@ -1,11 +1,5 @@
-# Render Blueprint — https://github.com/Greeshmasindhu24/chessmaster
-# Env URLs are pre-set; update in Render dashboard if your service URLs differ.
-
-databases:
-  - name: chessmaster-db
-    plan: free
-    databaseName: chessmaster
-    user: chess
+# Render Blueprint — no Render Postgres (free tier allows only 1 DB per account).
+# Use Neon free Postgres: https://neon.tech → copy connection string → set DATABASE_URL on chessmaster-api.
 
 services:
   - type: web
@@ -17,9 +11,7 @@ services:
     healthCheckPath: /api/v1/health
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: chessmaster-db
-          property: connectionString
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
@@ -42,6 +34,8 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://chessmaster-api.onrender.com
+      - key: VITE_PLAY_MVP
+        value: "true"
     routes:
       - type: rewrite
         source: /*

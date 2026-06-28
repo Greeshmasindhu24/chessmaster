@@ -9,6 +9,7 @@ import { cloneChess } from '../utils/chessDisplay'
 import { motion } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
 import { api, authApi, billingApi, formatNetworkError } from '../services/api'
+import { hideDummyBilling } from '../config/features'
 import { gameSocket } from '../services/socket'
 import { setUser } from '../store/authSlice'
 import type { RootState } from '../store'
@@ -85,6 +86,10 @@ export default function PlayOnlinePage() {
   const handlePresetClick = (preset: TimePreset) => {
     const tier = onlineTiers.find((t) => t.id === preset.tier)
     if (tier && !tier.unlocked && tier.requires_payment) {
+      if (hideDummyBilling) {
+        setStatus('Premium time controls coming soon')
+        return
+      }
       setUpgradeTier(tier)
       return
     }
@@ -94,6 +99,10 @@ export default function PlayOnlinePage() {
 
   const requireUnlockedOrUpgrade = (): boolean => {
     if (isPresetUnlocked) return true
+    if (hideDummyBilling) {
+      setStatus('Premium time controls coming soon')
+      return false
+    }
     if (selectedTierInfo) setUpgradeTier(selectedTierInfo)
     setStatus('Payment required for this time control')
     return false
@@ -231,7 +240,10 @@ export default function PlayOnlinePage() {
       gameSocket.on('error', (data) => {
         const msg = data.message as string
         setStatus(`Error: ${msg}`)
-        if (msg.toLowerCase().includes('upgrade') || msg.toLowerCase().includes('payment')) {
+        if (
+          !hideDummyBilling &&
+          (msg.toLowerCase().includes('upgrade') || msg.toLowerCase().includes('payment'))
+        ) {
           setPhase('lobby')
           if (selectedTierInfo) setUpgradeTier(selectedTierInfo)
         }
@@ -263,7 +275,7 @@ export default function PlayOnlinePage() {
     setStatus(`Room created — share code: ${data.room_code}`)
     gameSocket.joinGame(data.id)
     } catch (err) {
-      if ((err as { response?: { status?: number } }).response?.status === 402 && selectedTierInfo) {
+      if (!hideDummyBilling && (err as { response?: { status?: number } }).response?.status === 402 && selectedTierInfo) {
         setUpgradeTier(selectedTierInfo)
       }
       setStatus(formatNetworkError(err, 'create room') || 'Could not create room')
@@ -342,6 +354,7 @@ export default function PlayOnlinePage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-4xl">
+      {!hideDummyBilling && (
       <UpgradeModal
         tier={upgradeTier}
         product="online"
@@ -360,6 +373,7 @@ export default function PlayOnlinePage() {
           setStatus('Time control unlocked — find a match or create a room!')
         }}
       />
+      )}
 
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Play Online</h1>
@@ -399,11 +413,15 @@ export default function PlayOnlinePage() {
                 </button>
               )})}
             </div>
-            <p className="mt-2 text-xs text-gray-500">Blitz 3+2 is free. Other time controls require a one-time unlock.</p>
+            <p className="mt-2 text-xs text-gray-500">
+              {hideDummyBilling
+                ? 'Blitz 3+2 is free. Other time controls coming in a future update.'
+                : 'Blitz 3+2 is free. Other time controls require a one-time unlock.'}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {!isPresetUnlocked && selectedTierInfo?.requires_payment ? (
+            {!hideDummyBilling && !isPresetUnlocked && selectedTierInfo?.requires_payment ? (
               <button
                 type="button"
                 onClick={() => setUpgradeTier(selectedTierInfo)}
