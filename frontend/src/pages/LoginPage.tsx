@@ -18,6 +18,12 @@ export default function LoginPage() {
   const location = useLocation()
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('session') === 'expired') {
+      setRegisteredMsg('Your session expired. Please sign in again.')
+      return
+    }
+
     const state = location.state as {
       registered?: boolean
       email?: string
@@ -34,7 +40,7 @@ export default function LoginPage() {
     if (state?.email) {
       setEmail(state.email)
     }
-  }, [location.state])
+  }, [location.search, location.state])
 
   const finishLogin = (data: { user: User; access_token: string; refresh_token: string }) => {
     dispatch(

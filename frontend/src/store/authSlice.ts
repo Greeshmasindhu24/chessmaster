@@ -34,10 +34,35 @@ interface AuthState {
   isAuthenticated: boolean
 }
 
-const stored = localStorage.getItem('chessmaster_auth')
-const initial: AuthState = stored
-  ? JSON.parse(stored)
-  : { user: null, accessToken: null, refreshToken: null, isAuthenticated: false }
+function loadStoredAuth(): AuthState {
+  const empty: AuthState = {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+  }
+  try {
+    const raw = localStorage.getItem('chessmaster_auth')
+    if (!raw) return empty
+    const parsed = JSON.parse(raw) as Partial<AuthState>
+    const hasToken = Boolean(parsed.accessToken || parsed.refreshToken)
+    if (!parsed.isAuthenticated || !parsed.user || !hasToken) {
+      localStorage.removeItem('chessmaster_auth')
+      return empty
+    }
+    return {
+      user: parsed.user,
+      accessToken: parsed.accessToken ?? null,
+      refreshToken: parsed.refreshToken ?? null,
+      isAuthenticated: true,
+    }
+  } catch {
+    localStorage.removeItem('chessmaster_auth')
+    return empty
+  }
+}
+
+const initial: AuthState = loadStoredAuth()
 
 const authSlice = createSlice({
   name: 'auth',

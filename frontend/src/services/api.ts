@@ -2,16 +2,60 @@
 import { store } from '../store'
 import { logout, setCredentials } from '../store/authSlice'
 import type { Country, Gender } from '../config/profileFields'
-import { apiV1BaseUrl, isBrowserLocalDevHost, resolveApiOrigin } from '../config/apiUrl'
+import {
+  apiV1BaseUrl,
+  isBrowserLocalDevHost,
+  isRenderProductionWeb,
+  resolveApiOrigin,
+} from '../config/apiUrl'
 
 const API_ORIGIN = resolveApiOrigin()
 
 export const apiBaseUrl = apiV1BaseUrl()
 
+const REMOTE_API_TIMEOUT_MS = 90_000
+const LOCAL_API_TIMEOUT_MS = 30_000
+
 export const api = axios.create({
   baseURL: apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
+  timeout: API_ORIGIN ? REMOTE_API_TIMEOUT_MS : LOCAL_API_TIMEOUT_MS,
 })
+
+const AUTH_SESSION_MESSAGES = new Set([
+  'not authenticated',
+  'invalid token',
+  'invalid token type',
+  'invalid refresh token',
+  'session revoked',
+  'user not found or inactive',
+  'user inactive',
+])
+
+
+function isRemoteApiBase(base: string | undefined): boolean {
+  return (
+    typeof base === 'string' &&
+    (base.startsWith('http://') || base.startsWith('https://')) &&
+    !base.includes('localhost') &&
+    !base.includes('127.0.0.1')
+  )
+}
+
+function isRetryableColdStart(err: unknown): boolean {
+  const axiosErr = err as { response?: unknown; code?: string }
+  return !axiosErr.response && (axiosErr.code === 'ERR_NETWORK' || axiosErr.code === 'ECONNABORTED')
+}
+
+async function withRenderColdStartRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (!API_ORIGIN || !isRetryableColdStart(err)) throw err
+    await new Promise((r) => setTimeout(r, 2500))
+    return fn()
+  }
+}
 
 export function formatNetworkError(err: unknown, action: string): string {
   const axiosErr = err as {
@@ -21,13 +65,17 @@ export function formatNetworkError(err: unknown, action: string): string {
     message?: string
   }
   if (axiosErr.response) {
+    const status = axiosErr.response.status
     const detail = axiosErr.response.data?.detail
-    if (typeof detail === 'string') return detail
+    if (status === 401) return 'Please log in again.'
+    if (typeof detail === 'string') {
+      if (AUTH_SESSION_MESSAGES.has(detail.toLowerCase())) return 'Please log in again.'
+      return detail
+    }
     if (detail && typeof detail === 'object' && 'message' in detail && typeof detail.message === 'string') {
       return detail.message
     }
     if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg
-    if (axiosErr.response.status === 401) return 'Please log in again.'
     if (axiosErr.response.status === 402) return 'Payment required to unlock this AI level.'
     if (axiosErr.response.status && axiosErr.response.status >= 500) {
       return `Server error (${action}). Restart .\\run_backend.ps1 and try again.`
@@ -38,17 +86,25 @@ export function formatNetworkError(err: unknown, action: string): string {
   const path = axiosErr.config?.url ?? ''
   const attempted = `${base}${path}`.replace(/([^:]\/)\/+/g, '$1')
 
-  const remoteApi =
-    typeof base === 'string' &&
-    (base.startsWith('http://') || base.startsWith('https://')) &&
-    !base.includes('localhost') &&
-    !base.includes('127.0.0.1')
+  const remoteApi = isRemoteApiBase(base)
+  const code = axiosErr.code
+  const onProdWeb = isRenderProductionWeb()
+
+  if (remoteApi && import.meta.env.DEV) {
+    return `Cannot reach server (${action}). Local dev must use http://localhost:5173 with .\run_frontend.ps1 (VITE_API_URL empty) and .\run_backend.ps1 on port 8001 — not the Render API. Tried ${attempted}.`
+  }
 
   if (remoteApi && isBrowserLocalDevHost()) {
-    return `Cannot reach server (${action}). The app is calling ${attempted}, but local dev should use the Vite proxy. Clear VITE_API_URL in frontend/.env.local (leave it empty), restart .\\run_frontend.ps1, and run the backend on port 8001 (.\\run_backend.ps1). Calling Render from localhost is blocked by CORS.`
+    return `Cannot reach server (${action}). The app is calling ${attempted}, but local dev should use the Vite proxy. Clear VITE_API_URL in frontend/.env.local (leave it empty), restart .\run_frontend.ps1, and run the backend on port 8001 (.\run_backend.ps1). Calling Render from localhost is blocked by CORS.`
   }
 
   if (remoteApi && typeof window !== 'undefined') {
+    if (code === 'ECONNABORTED') {
+      return `Request timed out (${action}) after ${REMOTE_API_TIMEOUT_MS / 1000}s. The Render API (chessmaster-api) may be waking from sleep — wait ~1 minute, open https://chessmaster-api.onrender.com/api/v1/health in a tab, then retry sign-in.`
+    }
+    if (onProdWeb) {
+      return `Cannot reach the API (${action}). You are on the production site (chessmaster-web). Tried ${attempted}. If chessmaster-api was sleeping, wait ~1 minute and retry (we also retry once automatically). Check https://chessmaster-api.onrender.com/api/v1/health in your browser.`
+    }
     return `Cannot reach server (${action}). Tried ${attempted}. If the API was sleeping, wait ~1 minute and retry. Otherwise check Render dashboard (chessmaster-api health) and your network connection.`
   }
 
@@ -65,33 +121,50 @@ api.interceptors.request.use((config) => {
 
 const AUTH_NO_REFRESH_PATHS = ['/auth/login', '/auth/register', '/auth/guest', '/auth/refresh']
 
+function isPublicAuthPath(pathname: string): boolean {
+  return /^\/(login|register)(\/|$)/.test(pathname)
+}
+
+function clearSessionAndRedirectToLogin(): void {
+  store.dispatch(logout())
+  if (typeof window !== 'undefined' && !isPublicAuthPath(window.location.pathname)) {
+    window.location.assign('/login?session=expired')
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config
     const isAuthEndpoint = AUTH_NO_REFRESH_PATHS.some((p) => String(original?.url ?? '').includes(p))
-    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
-      original._retry = true
-      const refreshToken = store.getState().auth.refreshToken
-      if (refreshToken) {
-        try {
-          const refreshUrl = API_ORIGIN ? `${API_ORIGIN}/api/v1/auth/refresh` : '/api/v1/auth/refresh'
-          const { data } = await axios.post(refreshUrl, {
-            refresh_token: refreshToken,
-          })
-          const user = store.getState().auth.user!
-          store.dispatch(
-            setCredentials({
-              user,
-              accessToken: data.access_token,
-              refreshToken: data.refresh_token,
-            }),
-          )
-          original.headers.Authorization = `Bearer ${data.access_token}`
-          return api(original)
-        } catch {
-          store.dispatch(logout())
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      if (!original._retry) {
+        original._retry = true
+        const refreshToken = store.getState().auth.refreshToken
+        if (refreshToken) {
+          try {
+            const refreshUrl = API_ORIGIN ? `${API_ORIGIN}/api/v1/auth/refresh` : '/api/v1/auth/refresh'
+            const { data } = await axios.post(refreshUrl, {
+              refresh_token: refreshToken,
+            })
+            const user = store.getState().auth.user!
+            store.dispatch(
+              setCredentials({
+                user,
+                accessToken: data.access_token,
+                refreshToken: data.refresh_token,
+              }),
+            )
+            original.headers.Authorization = `Bearer ${data.access_token}`
+            return api(original)
+          } catch {
+            clearSessionAndRedirectToLogin()
+          }
+        } else {
+          clearSessionAndRedirectToLogin()
         }
+      } else {
+        clearSessionAndRedirectToLogin()
       }
     }
     return Promise.reject(error)
@@ -114,8 +187,8 @@ export interface LoginData {
 
 export const authApi = {
   register: (data: RegisterData) => api.post('/auth/register', data),
-  login: (data: LoginData) => api.post('/auth/login', data),
-  guestLogin: () => api.post('/auth/guest'),
+  login: (data: LoginData) => withRenderColdStartRetry(() => api.post('/auth/login', data)),
+  guestLogin: () => withRenderColdStartRetry(() => api.post('/auth/guest')),
   me: () => api.get('/auth/me'),
   logout: (refreshToken: string) => api.post('/auth/logout', { refresh_token: refreshToken }),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),

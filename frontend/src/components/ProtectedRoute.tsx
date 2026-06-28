@@ -3,7 +3,9 @@ import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated)
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  const { isAuthenticated, accessToken, refreshToken } = useSelector((s: RootState) => s.auth)
+  if (!isAuthenticated || (!accessToken && !refreshToken)) {
+    return <Navigate to="/login?session=expired" replace />
+  }
   return <>{children}</>
 }
