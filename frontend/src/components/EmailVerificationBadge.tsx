@@ -33,7 +33,7 @@ export default function EmailVerificationBadge({ user, variant = 'nav' }: Props)
   if (variant === 'nav') {
     return (
       <Link
-        to="/settings"
+        to="/settings#verification"
         className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-500/25 dark:text-amber-200"
         title="Verify your email to unlock AI and online play"
       >
@@ -49,7 +49,7 @@ export default function EmailVerificationBadge({ user, variant = 'nav' }: Props)
         Check your inbox for the verification link, or resend it from settings.
       </p>
       <Link
-        to="/settings"
+        to="/settings#verification"
         className="mt-2 inline-block text-xs font-semibold text-emerald-700 underline hover:no-underline dark:text-emerald-400"
       >
         Open settings to verify →

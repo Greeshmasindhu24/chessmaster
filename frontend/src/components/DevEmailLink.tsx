@@ -23,7 +23,12 @@ export default function DevEmailLink({
       </p>
       <p className="mt-2 text-xs text-amber-600/80 dark:text-amber-400/80">{label}</p>
       <p className="mt-1 break-all">
-        <a href={url} className="underline hover:no-underline">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:no-underline"
+        >
           {url}
         </a>
       </p>

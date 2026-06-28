@@ -39,7 +39,7 @@ class AuthService:
             username=data.username.lower(),
             hashed_password=hash_password(data.password),
             role=UserRole.PLAYER,
-            is_verified=not EmailService.is_configured(),
+            is_verified=False,
         )
         db.add(user)
         await db.flush()
@@ -242,16 +242,11 @@ class AuthService:
 
     @staticmethod
     async def request_email_verification(db: AsyncSession, user: User) -> str | None:
-        """Send verification email when SMTP is configured. Auto-verify when it is not."""
+        """Send verification email when SMTP is configured. Returns verify URL when email was not sent."""
         if user.is_verified:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified")
         if user.role == UserRole.GUEST:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Guest accounts cannot verify email")
-
-        if not EmailService.is_configured():
-            user.is_verified = True
-            logger.info("Auto-verified user %s (SMTP not configured)", user.email)
-            return None
 
         raw_token = token_urlsafe(32)
         token = EmailVerificationToken(
@@ -265,12 +260,12 @@ class AuthService:
 
         settings = get_settings()
         verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
-        await EmailService.send_email(
+        sent = await EmailService.send_email(
             user.email,
             "Verify your ChessMaster Pro email",
             f"Confirm your email address (expires in 24 hours):\n{verify_url}",
         )
-        return None
+        return None if sent else verify_url
 
     @staticmethod
     async def confirm_email_verification(db: AsyncSession, token: str) -> None:

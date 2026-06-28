@@ -15,7 +15,7 @@ export default function VerifiedPlayRoute({ children }: { children: React.ReactN
             inbox for the verification link, or resend it from settings.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to="/settings" className="btn-primary">
+            <Link to="/settings#verification" className="btn-primary">
               Resend verification
             </Link>
             <Link to="/dashboard" className="btn-secondary">

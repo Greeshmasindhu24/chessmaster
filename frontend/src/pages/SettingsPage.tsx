@@ -45,6 +45,16 @@ export default function SettingsPage() {
     }
   }, [user?.profile])
 
+  useEffect(() => {
+    if (window.location.hash !== '#verification') return
+    const el = document.getElementById('verification')
+    if (!el) return
+    const timer = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const { data: prefs } = useQuery({
     queryKey: ['preferences'],
     queryFn: () => profileApi.getPreferences().then((r) => r.data),
@@ -318,7 +328,7 @@ export default function SettingsPage() {
           </div>
         </div>
         {!user?.is_verified && user?.role !== 'guest' && (
-          <>
+          <div id="verification" className="scroll-mt-24">
             <button
               type="button"
               onClick={() => {
@@ -332,10 +342,18 @@ export default function SettingsPage() {
               {verifyMutation.isPending ? 'Sending...' : 'Resend verification email'}
             </button>
             {verifyMsg && (
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{verifyMsg}</p>
+              <p
+                className={`mt-2 text-xs ${
+                  verifyUrl
+                    ? 'text-amber-700 dark:text-amber-300'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {verifyMsg}
+              </p>
             )}
             <DevEmailLink label="Use this link to verify your email:" url={verifyUrl} />
-          </>
+          </div>
         )}
         <p className="mt-4 text-xs text-gray-500">
           <Link to="/forgot-password" className="text-emerald-600 hover:underline dark:text-emerald-400">
