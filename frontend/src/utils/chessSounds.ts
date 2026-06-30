@@ -10,8 +10,8 @@ export type MoveSoundKind =
 
 export type PieceType = 'p' | 'n' | 'b' | 'r' | 'q' | 'k'
 
-/** Overall output level for all chess move sounds (gain node; values above 1 are allowed). */
-export const MASTER_GAIN = 1.8
+/** Overall output level (1.0 = full; per-sound volumes do the rest). */
+export const MASTER_GAIN = 1.0
 
 let audioCtx: AudioContext | null = null
 let masterGain: GainNode | null = null
@@ -26,7 +26,7 @@ function getAudioContext(): AudioContext | null {
   }
 }
 
-/** Call on first user gesture so browsers allow playback (AudioContext autoplay policy). */
+/** Resume AudioContext on user gesture (browser autoplay policy). Safe to call repeatedly. */
 export function unlockAudio(): void {
   const ctx = getAudioContext()
   if (!ctx || ctx.state === 'running') return
@@ -58,7 +58,7 @@ function scheduleTone(
     endFrequency,
     durationMs,
     type = 'sine',
-    volume = 0.35,
+    volume = 0.55,
     delayMs = 0,
   }: ToneOpts,
 ) {
@@ -70,7 +70,7 @@ function scheduleTone(
   gain.connect(getMasterOut(ctx))
 
   const start = ctx.currentTime + delayMs / 1000
-  const attack = 0.008
+  const attack = 0.002
   const duration = durationMs / 1000
   const end = start + duration
 
@@ -84,19 +84,21 @@ function scheduleTone(
   }
 
   osc.start(start)
-  osc.stop(end + 0.015)
+  osc.stop(end + 0.004)
 }
 
 function playTone(opts: ToneOpts) {
   const ctx = getAudioContext()
   if (!ctx) return
 
+  unlockAudio()
+
   const run = () => scheduleTone(ctx, opts)
 
-  if (ctx.state === 'suspended') {
-    void ctx.resume().then(run).catch(() => {})
-  } else {
+  if (ctx.state === 'running') {
     run()
+  } else {
+    void ctx.resume().then(run).catch(run)
   }
 }
 
@@ -106,41 +108,41 @@ function pieceTypeFromMove(move: Move): PieceType {
 }
 
 function playPawn(opts?: { louder?: boolean }) {
-  const vol = opts?.louder ? 0.5 : 0.34
-  playTone({ frequency: 520, durationMs: 55, type: 'sine', volume: vol })
+  const vol = opts?.louder ? 0.72 : 0.58
+  playTone({ frequency: 540, durationMs: 30, type: 'triangle', volume: vol })
 }
 
 function playKnight(opts?: { louder?: boolean }) {
-  const vol = opts?.louder ? 0.46 : 0.36
-  playTone({ frequency: 380, durationMs: 70, type: 'triangle', volume: vol })
-  playTone({ frequency: 620, durationMs: 85, type: 'triangle', volume: vol * 0.85, delayMs: 55 })
+  const vol = opts?.louder ? 0.7 : 0.56
+  playTone({ frequency: 400, durationMs: 36, type: 'triangle', volume: vol })
+  playTone({ frequency: 650, durationMs: 40, type: 'triangle', volume: vol * 0.88, delayMs: 20 })
 }
 
 function playBishop(opts?: { louder?: boolean }) {
-  const vol = opts?.louder ? 0.46 : 0.36
+  const vol = opts?.louder ? 0.68 : 0.54
   playTone({
-    frequency: 480,
-    endFrequency: 720,
-    durationMs: 110,
+    frequency: 500,
+    endFrequency: 760,
+    durationMs: 55,
     type: 'sine',
     volume: vol,
   })
 }
 
 function playRook(opts?: { louder?: boolean }) {
-  const vol = opts?.louder ? 0.54 : 0.4
-  playTone({ frequency: 180, durationMs: 90, type: 'triangle', volume: vol })
+  const vol = opts?.louder ? 0.78 : 0.62
+  playTone({ frequency: 190, durationMs: 48, type: 'triangle', volume: vol })
 }
 
 function playQueen(opts?: { louder?: boolean }) {
-  const vol = opts?.louder ? 0.42 : 0.32
-  playTone({ frequency: 660, durationMs: 100, type: 'sine', volume: vol })
-  playTone({ frequency: 880, durationMs: 130, type: 'sine', volume: vol * 0.75, delayMs: 70 })
+  const vol = opts?.louder ? 0.66 : 0.52
+  playTone({ frequency: 680, durationMs: 50, type: 'sine', volume: vol })
+  playTone({ frequency: 900, durationMs: 58, type: 'sine', volume: vol * 0.82, delayMs: 32 })
 }
 
 function playKing(opts?: { louder?: boolean }) {
-  const vol = opts?.louder ? 0.5 : 0.38
-  playTone({ frequency: 220, durationMs: 120, type: 'sine', volume: vol })
+  const vol = opts?.louder ? 0.72 : 0.58
+  playTone({ frequency: 240, durationMs: 58, type: 'sine', volume: vol })
 }
 
 function playPieceSound(piece: PieceType, louder = false) {
@@ -166,18 +168,18 @@ function playPieceSound(piece: PieceType, louder = false) {
 }
 
 function playCheckAlert() {
-  playTone({ frequency: 740, durationMs: 120, type: 'sine', volume: 0.3, delayMs: 40 })
+  playTone({ frequency: 900, durationMs: 48, type: 'sine', volume: 0.62 })
 }
 
 function playGameover() {
-  playTone({ frequency: 440, durationMs: 160, type: 'sine', volume: 0.36 })
-  playTone({ frequency: 370, durationMs: 200, type: 'sine', volume: 0.32, delayMs: 140 })
-  playTone({ frequency: 294, durationMs: 280, type: 'sine', volume: 0.28, delayMs: 280 })
+  playTone({ frequency: 440, durationMs: 80, type: 'sine', volume: 0.6 })
+  playTone({ frequency: 370, durationMs: 90, type: 'sine', volume: 0.55, delayMs: 60 })
+  playTone({ frequency: 294, durationMs: 110, type: 'sine', volume: 0.5, delayMs: 120 })
 }
 
 function playCastling() {
   playRook()
-  playTone({ frequency: 160, durationMs: 70, type: 'triangle', volume: 0.28, delayMs: 50 })
+  playTone({ frequency: 170, durationMs: 40, type: 'triangle', volume: 0.55, delayMs: 24 })
 }
 
 export function soundKindForMove(chess: Chess, move: Move): MoveSoundKind {
@@ -191,6 +193,8 @@ export function soundKindForMove(chess: Chess, move: Move): MoveSoundKind {
 
 export function playMoveSound(kind: MoveSoundKind, enabled: boolean, move?: Move) {
   if (!enabled) return
+
+  unlockAudio()
 
   const piece = move ? pieceTypeFromMove(move) : 'p'
 

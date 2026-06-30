@@ -4,16 +4,21 @@ import { Chess, Move } from 'chess.js'
 import { RootState } from '../store'
 import { playMoveSound, soundKindForMove, unlockAudio, type MoveSoundKind } from '../utils/chessSounds'
 
+const UNLOCK_EVENTS = ['pointerdown', 'click', 'touchstart', 'keydown'] as const
+const UNLOCK_OPTS: AddEventListenerOptions = { capture: true, passive: true }
+
 export function useChessSounds() {
   const soundEnabled = useSelector((s: RootState) => s.settings.soundEnabled)
 
   useEffect(() => {
     const unlock = () => unlockAudio()
-    window.addEventListener('pointerdown', unlock, { once: true })
-    window.addEventListener('keydown', unlock, { once: true })
+    for (const event of UNLOCK_EVENTS) {
+      document.addEventListener(event, unlock, UNLOCK_OPTS)
+    }
     return () => {
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
+      for (const event of UNLOCK_EVENTS) {
+        document.removeEventListener(event, unlock, UNLOCK_OPTS)
+      }
     }
   }, [])
 
