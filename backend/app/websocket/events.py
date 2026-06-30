@@ -100,14 +100,14 @@ async def game_websocket(websocket: WebSocket, token: str = ""):
                 await manager.send_event(user_id, "error", {"message": f"Unknown message type: {msg_type}"})
 
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
+        manager.disconnect(user_id, websocket)
         await MatchmakingService.dequeue(
             user,
             last_matchmaking["time_control_seconds"],
             last_matchmaking["increment_seconds"],
         )
     except Exception:
-        manager.disconnect(user_id)
+        manager.disconnect(user_id, websocket)
 
 
 async def _handle_join_game(user: User, data: dict) -> None:

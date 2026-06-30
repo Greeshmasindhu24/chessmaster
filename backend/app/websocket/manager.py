@@ -20,7 +20,9 @@ class ConnectionManager:
                 pass
         self.active_connections[user_id] = websocket
 
-    def disconnect(self, user_id: str) -> None:
+    def disconnect(self, user_id: str, websocket: WebSocket | None = None) -> None:
+        if websocket is not None and self.active_connections.get(user_id) is not websocket:
+            return
         self.active_connections.pop(user_id, None)
         self.user_games.pop(user_id, None)
 

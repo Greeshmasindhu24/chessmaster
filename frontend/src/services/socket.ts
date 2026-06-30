@@ -30,14 +30,26 @@ export class GameSocket {
   private ws: WebSocket | null = null
   private handlers = new Map<GameEvent, Set<EventHandler>>()
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private connectionId = 0
+  private onOpenCallbacks = new Set<() => void>()
 
   connect(accessToken: string) {
-    if (this.ws?.readyState === WebSocket.OPEN) return
+    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) {
+      return
+    }
 
+    const id = ++this.connectionId
     const url = `${wsBaseUrl()}/api/v1/ws/game?token=${encodeURIComponent(accessToken)}`
-    this.ws = new WebSocket(url)
+    const ws = new WebSocket(url)
+    this.ws = ws
 
-    this.ws.onmessage = (event) => {
+    ws.onopen = () => {
+      if (this.connectionId !== id) return
+      this.onOpenCallbacks.forEach((cb) => cb())
+    }
+
+    ws.onmessage = (event) => {
+      if (this.connectionId !== id) return
       try {
         const msg = JSON.parse(event.data) as WsMessage
         const handlers = this.handlers.get(msg.event)
@@ -47,13 +59,22 @@ export class GameSocket {
       }
     }
 
-    this.ws.onclose = () => {
+    ws.onclose = () => {
+      if (this.connectionId !== id) return
       this.ws = null
+    }
+  }
+
+  onOpen(callback: () => void) {
+    this.onOpenCallbacks.add(callback)
+    return () => {
+      this.onOpenCallbacks.delete(callback)
     }
   }
 
   disconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.connectionId += 1
     this.ws?.close()
     this.ws = null
   }

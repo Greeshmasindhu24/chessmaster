@@ -197,6 +197,14 @@ export default function PlayOnlinePage() {
 
     gameSocket.connect(accessToken)
 
+    return () => {
+      gameSocket.disconnect()
+    }
+  }, [accessToken])
+
+  useEffect(() => {
+    if (!accessToken) return
+
     const unsubs = [
       gameSocket.on('matchmaking', (data) => {
         if (data.status === 'waiting') setPhase('waiting')
@@ -224,28 +232,37 @@ export default function PlayOnlinePage() {
         if (data.fen) applyFen(data.fen as string)
 
         if (joinedUsername && data.your_color) {
-          // Opponent joined — host notification with full game state
           setOpponentJoined(true)
           setOrientation(data.your_color as 'white' | 'black')
-          setGameInfo((prev) =>
-            prev ? { ...prev, opponent: joinedUsername } : prev,
-          )
+          setGameInfo((prev) => {
+            if (prev) return { ...prev, opponent: joinedUsername }
+            return {
+              gameId: data.game_id as string,
+              roomCode: (data.room_code as string) ?? '',
+              color: data.your_color as 'white' | 'black',
+              opponent: joinedUsername,
+            }
+          })
           setPhase('playing')
           setStatus(`Opponent joined! Playing vs ${joinedUsername}`)
         } else if (data.your_color && isActive) {
-          // Joiner entering an active game
           setOrientation(data.your_color as 'white' | 'black')
           setPhase('playing')
           setStatus('Game started!')
         } else if (data.your_color) {
-          // Host waiting in their own room — keep waiting screen
           setOrientation(data.your_color as 'white' | 'black')
         } else if (joinedUsername) {
           setOpponentJoined(true)
           setOrientation('white')
-          setGameInfo((prev) =>
-            prev ? { ...prev, opponent: joinedUsername } : prev,
-          )
+          setGameInfo((prev) => {
+            if (prev) return { ...prev, opponent: joinedUsername }
+            return {
+              gameId: data.game_id as string,
+              roomCode: (data.room_code as string) ?? '',
+              color: 'white',
+              opponent: joinedUsername,
+            }
+          })
           setPhase('playing')
           setStatus(`Opponent joined! Playing vs ${joinedUsername}`)
         }
@@ -300,9 +317,43 @@ export default function PlayOnlinePage() {
 
     return () => {
       unsubs.forEach((off) => off())
-      gameSocket.disconnect()
     }
   }, [accessToken, applyFen, applyMove, resetChess, refreshProfile, selectedTierInfo, playKind])
+
+  useEffect(() => {
+    if (!accessToken || !gameInfo?.gameId) return
+    if (phase !== 'waiting' && phase !== 'playing') return
+
+    gameSocket.joinGame(gameInfo.gameId)
+    const offOpen = gameSocket.onOpen(() => {
+      gameSocket.joinGame(gameInfo.gameId)
+    })
+    return () => {
+      offOpen()
+    }
+  }, [accessToken, gameInfo?.gameId, phase])
+
+  useEffect(() => {
+    if (phase !== 'waiting' || !gameInfo?.gameId || opponentJoined) return
+
+    const poll = async () => {
+      try {
+        const { data } = await api.get(`/games/${gameInfo.gameId}`)
+        if (data.status === 'active' && data.black_player_id) {
+          applyFen(data.fen)
+          setOpponentJoined(true)
+          setPhase('playing')
+          setStatus('Opponent joined! Game started!')
+        }
+      } catch {
+        /* ignore transient poll errors */
+      }
+    }
+
+    const interval = window.setInterval(poll, 2000)
+    void poll()
+    return () => window.clearInterval(interval)
+  }, [phase, gameInfo?.gameId, opponentJoined, applyFen])
 
   const createRoom = async () => {
     if (!selectedPreset || !requireUnlockedOrUpgrade()) return
