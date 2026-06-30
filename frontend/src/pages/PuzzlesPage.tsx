@@ -31,58 +31,62 @@ function createPuzzleState(puzzle: DailyPuzzle): PuzzlePlayState {
 }
 
 function HowToPlayGuide() {
-  const [open, setOpen] = useState(false)
-
   return (
-    <div className="glass-panel mb-6 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-white/[0.03] sm:p-5"
-      >
+    <details className="glass-panel group mb-6 overflow-hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 transition-colors hover:bg-white/[0.03] sm:p-5 [&::-webkit-details-marker]:hidden">
         <span className="font-semibold text-gray-100">How to play</span>
         <span
-          className={`shrink-0 text-sm text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          className="shrink-0 text-sm text-gray-400 transition-transform group-open:rotate-180"
           aria-hidden
         >
           ▼
         </span>
-      </button>
-      {open && (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
-          <ul className="space-y-2.5 text-sm leading-relaxed text-gray-400">
-            <li>
-              <span className="font-medium text-gray-300">Sign in required.</span> Daily puzzles are
-              available only when you are logged in.
-            </li>
-            <li>
-              <span className="font-medium text-gray-300">Three puzzles per day.</span> Use the
-              Puzzle 1, 2, and 3 tabs to switch between today&apos;s challenges. New puzzles arrive
-              each day.
-            </li>
-            <li>
-              <span className="font-medium text-gray-300">Click to move</span> — tap a piece, then
-              tap its destination. Pieces cannot be dragged.
-            </li>
-            <li>
-              Legal destinations appear as <span className="text-gray-300">dots</span> on the
-              board. A wrong move shows{' '}
-              <span className="text-gray-300">&ldquo;Not the best move&rdquo;</span> — try again.
-            </li>
-            <li>
-              Some puzzles need more than one move. After yours, the opponent&apos;s reply plays
-              automatically.
-            </li>
-            <li>
-              <span className="font-medium text-gray-300">Show hint</span> reveals a clue in the
-              sidebar. <span className="font-medium text-gray-300">Reset</span> restarts the current
-              puzzle from the beginning.
-            </li>
-          </ul>
-        </div>
-      )}
-    </div>
+      </summary>
+      <div className="border-t border-white/10 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+        <ul className="space-y-3 text-sm leading-relaxed text-gray-400">
+          <li>
+            <span className="font-medium text-gray-300">Daily puzzles.</span> You get three puzzles
+            each day — the same three for every player. They refresh at midnight and change
+            tomorrow.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Click to move.</span> Tap a piece, then tap
+            its destination. Pieces cannot be dragged. Legal squares show as{' '}
+            <span className="text-gray-300">dots</span> on the board.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Correct moves.</span> Your move must match
+            the puzzle&apos;s solution line. Other legal moves show{' '}
+            <span className="text-gray-300">&ldquo;Not the best move&mdash;try again&rdquo;</span>{' '}
+            — keep trying until you find the best line.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Multi-move puzzles.</span> Some puzzles need
+            several moves. After each correct move, the opponent&apos;s reply plays automatically
+            until you finish the full solution.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Hints.</span> Tap{' '}
+            <span className="text-gray-300">Show hint</span> in the sidebar for a text clue. Tap
+            again to hide it.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Reset.</span> Restarts the current puzzle
+            from the starting position so you can replay it.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Progress.</span> Use the{' '}
+            <span className="text-gray-300">Puzzle 1 / 2 / 3</span> tabs to switch puzzles. The{' '}
+            <span className="text-gray-300">X/3 solved</span> counter tracks how many you&apos;ve
+            completed today.
+          </li>
+          <li>
+            <span className="font-medium text-gray-300">Sounds.</span> Move and capture sounds play
+            when sound is enabled in Settings.
+          </li>
+        </ul>
+      </div>
+    </details>
   )
 }
 
