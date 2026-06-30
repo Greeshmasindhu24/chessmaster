@@ -64,9 +64,13 @@ function HowToPlayGuide() {
           <li>
             <span className="font-medium text-gray-300">Click to move.</span> Tap a piece (
             <span className="text-gray-300" aria-hidden>
-              ♙♘♗♖♕♔
+              ♙ ♟ ♘ ♞ ♗ ♝ ♖ ♜ ♕ ♛ ♔ ♚
             </span>
-            ), then tap its destination. Pieces cannot be dragged. Legal squares show as{' '}
+            ), then tap its destination. Squares are labeled by file{' '}
+            <span className="font-mono text-gray-300">a</span>–
+            <span className="font-mono text-gray-300">h</span> and rank{' '}
+            <span className="font-mono text-gray-300">1</span>–
+            <span className="font-mono text-gray-300">8</span>. Legal squares show as{' '}
             <span className="text-gray-300">dots</span> on the board.
           </li>
           <li>
@@ -96,10 +100,34 @@ function HowToPlayGuide() {
             completed today.
           </li>
           <li>
-            <span className="font-medium text-gray-300">Sounds.</span> Move and capture sounds play
-            when sound is enabled in Settings.
+            <span className="font-medium text-gray-300">Sounds.</span> Move and capture (
+            <span className="font-mono text-gray-300">x</span>) sounds play when sound is enabled in
+            Settings.
           </li>
         </ul>
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <h3 className="mb-2 text-sm font-semibold text-gray-200">Notation symbols</h3>
+          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-400">
+            <li>
+              <span className="font-mono font-medium text-gray-300">+</span> — check
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-300">#</span> — checkmate
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-300">x</span> — capture
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-300">O-O</span> — kingside castling
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-300">O-O-O</span> — queenside castling
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-300">=Q</span> — pawn promotes to queen
+            </li>
+          </ul>
+        </div>
       </div>
     </details>
   )

@@ -65,12 +65,12 @@ const socialModes = [
 const floatingPieces = ['♔', '♕', '♖', '♗', '♘', '♙']
 
 const CHESS_PIECES = {
-  pawn: '♙',
-  rook: '♖',
-  knight: '♘',
-  bishop: '♗',
-  queen: '♕',
-  king: '♔',
+  pawn: '♙ ♟',
+  rook: '♖ ♜',
+  knight: '♘ ♞',
+  bishop: '♗ ♝',
+  queen: '♕ ♛',
+  king: '♔ ♚',
 } as const
 
 function PieceLabel({ symbol, name }: { symbol: string; name: string }) {
@@ -105,6 +105,18 @@ function HowToPlayChessGuide() {
             squares can be selected.
           </li>
         </ul>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">The board</h3>
+          <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            Columns are files{' '}
+            <span className="font-mono text-gray-800 dark:text-gray-300">a</span>–
+            <span className="font-mono text-gray-800 dark:text-gray-300">h</span>; rows are ranks{' '}
+            <span className="font-mono text-gray-800 dark:text-gray-300">1</span>–
+            <span className="font-mono text-gray-800 dark:text-gray-300">8</span>. White starts on
+            ranks 1–2, black on 7–8.
+          </p>
+        </div>
 
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
@@ -143,10 +155,15 @@ function HowToPlayChessGuide() {
           </h3>
           <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Castling</span> — move the{' '}
-              <span aria-hidden>{CHESS_PIECES.king}</span> king two squares toward a{' '}
-              <span aria-hidden>{CHESS_PIECES.rook}</span> rook; the rook jumps to the other side. Only
-              if neither piece has moved, the path is clear, and the king is not in check.
+              <span className="font-medium text-gray-800 dark:text-gray-300">
+                Castling{' '}
+                <span className="font-mono text-gray-700 dark:text-gray-400">(O-O / O-O-O)</span>
+              </span>{' '}
+              — move the <span aria-hidden>{CHESS_PIECES.king}</span> king two squares toward a{' '}
+              <span aria-hidden>{CHESS_PIECES.rook}</span> rook; the rook jumps to the other side.{' '}
+              <span className="font-mono text-gray-700 dark:text-gray-400">O-O</span> is kingside,{' '}
+              <span className="font-mono text-gray-700 dark:text-gray-400">O-O-O</span> is queenside.
+              Only if neither piece has moved, the path is clear, and the king is not in check.
             </li>
             <li>
               <span className="font-medium text-gray-800 dark:text-gray-300">En passant</span> — a{' '}
@@ -154,8 +171,11 @@ function HowToPlayChessGuide() {
               captured as if it moved one square.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Promotion</span> — a{' '}
-              <span aria-hidden>{CHESS_PIECES.pawn}</span> pawn reaching the far rank becomes a{' '}
+              <span className="font-medium text-gray-800 dark:text-gray-300">
+                Promotion{' '}
+                <span className="font-mono text-gray-700 dark:text-gray-400">(=Q)</span>
+              </span>{' '}
+              — a <span aria-hidden>{CHESS_PIECES.pawn}</span> pawn reaching the far rank becomes a{' '}
               <span aria-hidden>{CHESS_PIECES.queen}</span> queen,{' '}
               <span aria-hidden>{CHESS_PIECES.rook}</span> rook,{' '}
               <span aria-hidden>{CHESS_PIECES.bishop}</span> bishop, or{' '}
@@ -172,25 +192,52 @@ function HowToPlayChessGuide() {
           <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             <li>
               <span className="font-medium text-gray-800 dark:text-gray-300">
-                <span className="mr-1" aria-hidden>
-                  {CHESS_PIECES.king}
-                </span>
-                Check
+                Check <span className="font-mono text-gray-700 dark:text-gray-400">(+)</span>
               </span>{' '}
-              — your king is under attack. You must get out of check on your next move.
+              — your <span aria-hidden>{CHESS_PIECES.king}</span> king is under attack. You must get
+              out of check on your next move.
             </li>
             <li>
               <span className="font-medium text-gray-800 dark:text-gray-300">
-                <span className="mr-1" aria-hidden>
-                  {CHESS_PIECES.king}
-                </span>
-                Checkmate
+                Checkmate <span className="font-mono text-gray-700 dark:text-gray-400">(#)</span>
               </span>{' '}
               — check with no legal escape. The game is over; the player in checkmate loses.
             </li>
             <li>
               <span className="font-medium text-gray-800 dark:text-gray-300">Stalemate</span> — no legal
               moves and not in check. The game is a draw.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
+            Notation symbols
+          </h3>
+          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <li>
+              <span className="font-mono font-medium text-gray-800 dark:text-gray-300">+</span> —
+              check
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-800 dark:text-gray-300">#</span> —
+              checkmate
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-800 dark:text-gray-300">x</span> —
+              capture (e.g. <span className="font-mono text-gray-700 dark:text-gray-400">Nxf7</span>)
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-800 dark:text-gray-300">O-O</span> —
+              kingside castling
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-800 dark:text-gray-300">O-O-O</span> —
+              queenside castling
+            </li>
+            <li>
+              <span className="font-mono font-medium text-gray-800 dark:text-gray-300">=Q</span> —
+              pawn promotes to queen
             </li>
           </ul>
         </div>
