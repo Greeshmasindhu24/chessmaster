@@ -159,8 +159,14 @@ async def _handle_join_game(user: User, data: dict) -> None:
                 "player_joined",
                 {
                     "game_id": str(game.id),
+                    "room_code": game.room_code,
+                    "fen": game.fen,
                     "username": user.username,
                     "user_id": str(user.id),
+                    "status": game.status.value,
+                    "your_color": "white" if UUID(opponent_id) == game.white_player_id else "black",
+                    "white_time_ms": state.get("white_time_ms", game.time_control_seconds * 1000),
+                    "black_time_ms": state.get("black_time_ms", game.time_control_seconds * 1000),
                 },
             )
 

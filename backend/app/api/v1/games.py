@@ -19,6 +19,7 @@ from app.schemas.game import (
     GameSummaryResponse,
 )
 from app.services.game_service import GameService
+from app.websocket.manager import manager
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -76,6 +77,26 @@ async def join_game(
 ):
     game = await GameService.join_game(db, user, data.room_code.upper())
     game = await _load_game_for_response(db, game.id)
+
+    host_id = str(game.white_player_id) if game.white_player_id else None
+    if host_id and host_id in manager.active_connections:
+        state = await GameService.get_redis_state(game.id) or {}
+        await manager.send_event(
+            host_id,
+            "player_joined",
+            {
+                "game_id": str(game.id),
+                "room_code": game.room_code,
+                "fen": game.fen,
+                "username": user.username,
+                "user_id": str(user.id),
+                "status": game.status.value,
+                "your_color": "white",
+                "white_time_ms": state.get("white_time_ms", game.time_control_seconds * 1000),
+                "black_time_ms": state.get("black_time_ms", game.time_control_seconds * 1000),
+            },
+        )
+
     return game
 
 

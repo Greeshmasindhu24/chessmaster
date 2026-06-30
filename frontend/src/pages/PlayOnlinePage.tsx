@@ -45,6 +45,7 @@ export default function PlayOnlinePage() {
   const [roomCodeInput, setRoomCodeInput] = useState('')
   const [createdRoomCode, setCreatedRoomCode] = useState('')
   const [copied, setCopied] = useState<'code' | 'share' | null>(null)
+  const [opponentJoined, setOpponentJoined] = useState(false)
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null)
   const [chess, setChess] = useState(() => new Chess())
   const [fen, setFen] = useState(new Chess().fen())
@@ -93,16 +94,6 @@ export default function PlayOnlinePage() {
     const presetLabel = selectedPreset?.label ?? 'chess'
     return `Join me for a ${presetLabel} game on ChessMaster Pro! Room code: ${createdRoomCode}`
   }, [createdRoomCode, selectedPreset])
-
-  const shareLinks = useMemo(() => {
-    const body = encodeURIComponent(shareMessage)
-    const subject = encodeURIComponent('Join my chess game on ChessMaster Pro')
-    return {
-      whatsapp: `https://wa.me/?text=${body}`,
-      sms: `sms:?body=${body}`,
-      email: `mailto:?subject=${subject}&body=${body}`,
-    }
-  }, [shareMessage])
 
   const canNativeShare = useMemo(
     () => typeof navigator !== 'undefined' && typeof navigator.share === 'function',
@@ -179,6 +170,7 @@ export default function PlayOnlinePage() {
     setPhase('lobby')
     setGameInfo(null)
     setCreatedRoomCode('')
+    setOpponentJoined(false)
     resetChess()
     setChatMessages([])
     setDrawOffered(false)
@@ -225,14 +217,37 @@ export default function PlayOnlinePage() {
         gameSocket.joinGame(info.gameId)
       }),
       gameSocket.on('player_joined', (data) => {
+        const gameStatus = (data.status as string | undefined)?.toLowerCase()
+        const isActive = gameStatus === 'active'
+        const joinedUsername = data.username as string | undefined
+
         if (data.fen) applyFen(data.fen as string)
-        if (data.your_color) {
+
+        if (joinedUsername && data.your_color) {
+          // Opponent joined — host notification with full game state
+          setOpponentJoined(true)
+          setOrientation(data.your_color as 'white' | 'black')
+          setGameInfo((prev) =>
+            prev ? { ...prev, opponent: joinedUsername } : prev,
+          )
+          setPhase('playing')
+          setStatus(`Opponent joined! Playing vs ${joinedUsername}`)
+        } else if (data.your_color && isActive) {
+          // Joiner entering an active game
           setOrientation(data.your_color as 'white' | 'black')
           setPhase('playing')
-          setStatus('Opponent connected — game started')
-        }
-        if (data.username) {
-          setStatus(`${data.username} joined the game`)
+          setStatus('Game started!')
+        } else if (data.your_color) {
+          // Host waiting in their own room — keep waiting screen
+          setOrientation(data.your_color as 'white' | 'black')
+        } else if (joinedUsername) {
+          setOpponentJoined(true)
+          setOrientation('white')
+          setGameInfo((prev) =>
+            prev ? { ...prev, opponent: joinedUsername } : prev,
+          )
+          setPhase('playing')
+          setStatus(`Opponent joined! Playing vs ${joinedUsername}`)
         }
       }),
       gameSocket.on('move_played', (data) => {
@@ -302,6 +317,7 @@ export default function PlayOnlinePage() {
       })
     resetChess()
     setCreatedRoomCode(data.room_code)
+    setOpponentJoined(false)
     setGameInfo({
       gameId: data.id,
       roomCode: data.room_code,
@@ -546,7 +562,7 @@ export default function PlayOnlinePage() {
               )}
             </div>
             <p className="mt-2 text-xs text-gray-500">
-              Create a room to get a code you can share with a friend.
+              You&apos;re the <span className="text-emerald-400">host</span> — create a room, share the code, and wait. You don&apos;t need to join your own room.
             </p>
           </div>
 
@@ -566,7 +582,7 @@ export default function PlayOnlinePage() {
               </button>
             </div>
             <p className="mt-2 text-xs text-gray-500">
-              Ask your friend for their 6-letter room code, then paste it here.
+              You&apos;re the <span className="text-emerald-400">friend</span> — enter the code your host sent you, then tap Join Room. You don&apos;t need to create a room.
             </p>
           </div>
         </div>
@@ -577,55 +593,57 @@ export default function PlayOnlinePage() {
           {createdRoomCode ? (
             <>
               <h2 className="mb-2 text-lg font-semibold text-white">Your game room is ready</h2>
-              <p className="mb-6 text-sm text-gray-400">
-                When your friend joins, the game starts automatically.
-              </p>
+              <div className="mx-auto mb-6 max-w-md rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-left text-sm text-emerald-100">
+                <p className="font-medium text-emerald-300">You&apos;re the host</p>
+                <p className="mt-1 text-emerald-100/90">
+                  You&apos;re already in the room — no need to join again. Share the code below, then wait here. The game starts automatically when your friend joins.
+                </p>
+              </div>
+              {opponentJoined ? (
+                <p className="mb-4 text-lg font-semibold text-emerald-400">Opponent joined! Starting game…</p>
+              ) : (
+                <p className="mb-4 text-sm text-gray-400">Waiting for your friend to join…</p>
+              )}
               <p className="mb-1 text-xs uppercase tracking-wide text-gray-500">Room code</p>
               <p className="mb-3 font-mono text-4xl font-bold tracking-[0.3em] text-emerald-400">
                 {createdRoomCode}
               </p>
               <p className="mb-4 text-sm text-gray-400">
-                Send this code to your friend using any app below
+                Share this code with your friend so they can join
               </p>
               <div className="mb-6 flex flex-wrap justify-center gap-2">
-                {canNativeShare && (
+                {canNativeShare ? (
                   <button
                     type="button"
                     onClick={shareNative}
-                    className="btn-secondary px-4 py-2 text-sm"
+                    className="btn-primary px-4 py-2 text-sm"
                   >
-                    Share
+                    Share via WhatsApp, Messages, or any app
                   </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => copyText(createdRoomCode, 'code')}
+                      className="btn-secondary px-4 py-2 text-sm"
+                    >
+                      {copied === 'code' ? 'Code copied!' : 'Copy code'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyText(shareMessage, 'share')}
+                      className="btn-secondary px-4 py-2 text-sm"
+                    >
+                      {copied === 'share' ? 'Invite copied!' : 'Copy invite message'}
+                    </button>
+                  </>
                 )}
-                <a
-                  href={shareLinks.whatsapp}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary px-4 py-2 text-sm"
-                >
-                  WhatsApp
-                </a>
-                <a href={shareLinks.sms} className="btn-secondary px-4 py-2 text-sm">
-                  SMS
-                </a>
-                <a href={shareLinks.email} className="btn-secondary px-4 py-2 text-sm">
-                  Email
-                </a>
-                <button
-                  type="button"
-                  onClick={() => copyText(createdRoomCode, 'code')}
-                  className="btn-secondary px-4 py-2 text-sm"
-                >
-                  {copied === 'code' ? 'Copied!' : 'Copy'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => copyText(shareMessage, 'share')}
-                  className="btn-secondary px-4 py-2 text-sm"
-                >
-                  {copied === 'share' ? 'Copied!' : 'Copy invite'}
-                </button>
               </div>
+              {!canNativeShare && (
+                <p className="mb-4 text-xs text-gray-500">
+                  Paste the code or invite into WhatsApp, SMS, email, or any chat app
+                </p>
+              )}
               <p className="mb-4 text-sm text-emerald-400">{status}</p>
               <button type="button" onClick={cancelWaiting} className="btn-secondary">
                 Cancel
