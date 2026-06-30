@@ -2,17 +2,20 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.exc import IntegrityError
 
+from app.api.v1.health import get_health_status
 from app.api.v1.router import api_router
 from app.core.config import PROJECT_ROOT, get_settings
-from app.core.database import Base, engine
+from app.core.database import Base, engine, get_db
+from app.schemas.auth import HealthResponse
 from app.core.redis import close_redis, init_cache
 from app.core.postgres_migrations import apply_postgres_migrations
 from app.core.sqlite_migrations import apply_sqlite_migrations
@@ -101,8 +104,14 @@ async def root():
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "docs": "/docs",
-        "health": f"{settings.API_V1_PREFIX}/health",
+        "health": "/health",
+        "health_v1": f"{settings.API_V1_PREFIX}/health",
     }
+
+
+@app.get("/health", response_model=HealthResponse, tags=["Health"])
+async def health_root(db: AsyncSession = Depends(get_db)):
+    return await get_health_status(db)
 
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)

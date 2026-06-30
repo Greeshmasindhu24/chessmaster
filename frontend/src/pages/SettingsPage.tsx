@@ -193,18 +193,23 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <label className="flex items-center gap-3 text-sm">
-          <input
-            type="checkbox"
-            checked={soundEnabled}
-            onChange={(e) => {
-              dispatch(setPreferences({ sound_enabled: e.target.checked }))
-              prefsMutation.mutate({ sound_enabled: e.target.checked })
-            }}
-            className="h-4 w-4 rounded border-gray-400"
-          />
-          Sound effects
-        </label>
+        <div>
+          <label className="flex items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={soundEnabled}
+              onChange={(e) => {
+                dispatch(setPreferences({ sound_enabled: e.target.checked }))
+                prefsMutation.mutate({ sound_enabled: e.target.checked })
+              }}
+              className="h-4 w-4 rounded border-gray-400"
+            />
+            Sound effects
+          </label>
+          <p className="mt-1 pl-7 text-xs text-gray-500 dark:text-gray-400">
+            Move, capture, check, and game-end sounds
+          </p>
+        </div>
 
         <label className="flex items-center gap-3 text-sm">
           <input
@@ -404,6 +409,9 @@ export default function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title="Coming soon">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Features still in development. Remove items from this list as they ship.
+        </p>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-500 dark:text-gray-400">
           <li>Google Sign-In (OAuth)</li>
           <li>Custom app icon & splash screen</li>

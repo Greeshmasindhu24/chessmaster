@@ -10,6 +10,9 @@ export type MoveSoundKind =
 
 export type PieceType = 'p' | 'n' | 'b' | 'r' | 'q' | 'k'
 
+/** Overall output level for all chess move sounds (0–1). */
+export const MASTER_GAIN = 0.8
+
 let audioCtx: AudioContext | null = null
 let masterGain: GainNode | null = null
 
@@ -27,7 +30,7 @@ function getAudioContext(): AudioContext | null {
 function getMasterOut(ctx: AudioContext): GainNode {
   if (!masterGain) {
     masterGain = ctx.createGain()
-    masterGain.gain.value = 0.5
+    masterGain.gain.value = MASTER_GAIN
     masterGain.connect(ctx.destination)
   }
   return masterGain

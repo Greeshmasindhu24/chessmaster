@@ -11,8 +11,7 @@ router = APIRouter(tags=["Health"])
 settings = get_settings()
 
 
-@router.get("/health", response_model=HealthResponse)
-async def health(db: AsyncSession = Depends(get_db)):
+async def get_health_status(db: AsyncSession) -> HealthResponse:
     db_status = "ok"
     try:
         await db.execute(text("SELECT 1"))
@@ -34,3 +33,8 @@ async def health(db: AsyncSession = Depends(get_db)):
         database=db_status,
         redis=redis_status,
     )
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health(db: AsyncSession = Depends(get_db)):
+    return await get_health_status(db)

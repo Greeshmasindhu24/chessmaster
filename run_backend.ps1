@@ -66,7 +66,8 @@ Write-Host "Database: $dbDisplay" -ForegroundColor DarkGray
 Write-Host "Cache:    in-memory (set REDIS_ENABLED=true and REDIS_URL for Redis)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Starting uvicorn on http://localhost:8001" -ForegroundColor Cyan
-Write-Host "Health:   http://localhost:8001/api/v1/health" -ForegroundColor Cyan
+Write-Host "Health:   http://localhost:8001/health" -ForegroundColor Cyan
+Write-Host "          http://localhost:8001/api/v1/health" -ForegroundColor DarkGray
 Write-Host "Press Ctrl+C to stop." -ForegroundColor DarkGray
 Write-Host ""
 
