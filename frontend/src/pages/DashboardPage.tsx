@@ -5,9 +5,8 @@ import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { RootState } from '../store'
 import { setUser } from '../store/authSlice'
-import { authApi, gamesApi, healthApi } from '../services/api'
+import { authApi, gamesApi } from '../services/api'
 import DevEmailLink from '../components/DevEmailLink'
-import { ageFromDateOfBirth, countryLabel, genderLabel } from '../config/profileFields'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 interface GameSummary {
@@ -44,12 +43,6 @@ export default function DashboardPage() {
   const profile = user?.profile
   const navState = location.state as { verifyUrl?: string | null; justRegistered?: boolean } | null
   const devVerifyUrl = navState?.verifyUrl ?? ''
-
-  const { data: health } = useQuery({
-    queryKey: ['health'],
-    queryFn: () => healthApi.check().then((r) => r.data),
-    refetchInterval: 30000,
-  })
 
   const { data: freshUser } = useQuery({
     queryKey: ['me'],
@@ -145,108 +138,38 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="glass-panel p-6">
-          <h2 className="text-lg font-semibold">Your Profile</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Username</span>
-              <span>{activeUser?.username ?? '—'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Email</span>
-              <span className="truncate pl-4 text-right">{activeUser?.email ?? '—'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Age</span>
-              <span>
-                {activeProfile?.date_of_birth
-                  ? (ageFromDateOfBirth(activeProfile.date_of_birth) ?? '—')
-                  : '—'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Gender</span>
-              <span>{genderLabel(activeProfile?.gender)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Country</span>
-              <span>{countryLabel(activeProfile?.country)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Email verified</span>
-              <span className={activeUser?.is_verified ? 'text-emerald-400' : 'text-yellow-400'}>
-                {activeUser?.is_verified ? 'Yes' : 'Pending'}
-              </span>
-            </div>
-          </div>
-          <Link to="/settings" className="btn-secondary mt-4 inline-block text-sm">
-            Edit profile
-          </Link>
-        </div>
-
-        <div className="glass-panel p-6">
-          <h2 className="text-lg font-semibold">Quick Play</h2>
-          <p className="mt-2 text-sm text-gray-400">
-            {isOnline
-              ? 'Find a random opponent online, or play offline on this device'
-              : 'You are offline — use same-device or vs AI modes'}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {isOnline ? (
-              <Link to="/play/online?match=1" className="btn-primary">
-                Play Online
-              </Link>
-            ) : (
-              <span className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
-                Online unavailable
-              </span>
-            )}
-            <Link to="/play" className="btn-secondary">
-              Play Offline
+      <div className="glass-panel p-6">
+        <h2 className="text-lg font-semibold">Quick Play</h2>
+        <p className="mt-2 text-sm text-gray-400">
+          {isOnline
+            ? 'Find a random opponent online, or play offline on this device'
+            : 'You are offline — use same-device or vs AI modes'}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {isOnline ? (
+            <Link to="/play/online?match=1" className="btn-primary">
+              Play Online
             </Link>
-            <Link to="/play/ai" className="btn-secondary">
-              Play vs AI
-            </Link>
-            <Link to="/rankings" className="btn-secondary">
-              Rankings
-            </Link>
-            <Link to="/friends" className="btn-secondary">
-              Friends
-            </Link>
-            <Link to="/puzzles" className="btn-secondary">
-              Puzzles
-            </Link>
-          </div>
-        </div>
-
-        <div className="glass-panel p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold">System Status</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">API</span>
-              <span className={health?.status === 'healthy' ? 'text-emerald-400' : 'text-yellow-400'}>
-                {health?.status ?? 'checking...'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Database</span>
-              <span className={health?.database === 'ok' ? 'text-emerald-400' : 'text-red-400'}>
-                {health?.database ?? '—'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Redis</span>
-              <span className={health?.redis === 'ok' ? 'text-emerald-400' : 'text-red-400'}>
-                {health?.redis ?? '—'}
-              </span>
-            </div>
-          </div>
-          {health?.status !== 'healthy' && (
-            <p className="mt-3 text-xs text-yellow-400">
-              Online play needs the backend running — use .\run_backend.ps1
-            </p>
+          ) : (
+            <span className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+              Online unavailable
+            </span>
           )}
+          <Link to="/play" className="btn-secondary">
+            Play Offline
+          </Link>
+          <Link to="/play/ai" className="btn-secondary">
+            Play vs AI
+          </Link>
+          <Link to="/rankings" className="btn-secondary">
+            Rankings
+          </Link>
+          <Link to="/friends" className="btn-secondary">
+            Friends
+          </Link>
+          <Link to="/puzzles" className="btn-secondary">
+            Puzzles
+          </Link>
         </div>
       </div>
 
