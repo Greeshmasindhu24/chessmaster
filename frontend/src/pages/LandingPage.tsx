@@ -64,6 +64,144 @@ const socialModes = [
 
 const floatingPieces = ['♔', '♕', '♖', '♗', '♘', '♙']
 
+function HowToPlayChessGuide() {
+  return (
+    <details className="glass-panel group mx-auto max-w-4xl overflow-hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.03] sm:p-5 [&::-webkit-details-marker]:hidden">
+        <span className="font-semibold text-gray-900 dark:text-gray-100">How to play chess</span>
+        <span
+          className="shrink-0 text-sm text-gray-500 transition-transform group-open:rotate-180 dark:text-gray-400"
+          aria-hidden
+        >
+          ▼
+        </span>
+      </summary>
+      <div className="space-y-5 border-t border-black/10 px-4 pb-5 pt-4 dark:border-white/10 sm:px-5 sm:pb-6">
+        <ul className="space-y-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+          <li>
+            <span className="font-medium text-gray-800 dark:text-gray-300">Click to move.</span>{' '}
+            Tap a piece, then tap its destination. Pieces cannot be dragged. Legal squares show as{' '}
+            <span className="text-gray-800 dark:text-gray-300">dots</span> on the board — only those
+            squares can be selected.
+          </li>
+        </ul>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
+            How the pieces move
+          </h3>
+          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Pawn</span> — one square
+              forward; two squares from its starting rank; captures diagonally.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Rook</span> — any number
+              of squares straight (horizontal or vertical).
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Knight</span> — an L-shape
+              (two squares one way, one square sideways); the only piece that can jump over others.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Bishop</span> — any number
+              of squares diagonally.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Queen</span> — any number
+              of squares in any straight line (combines rook and bishop).
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">King</span> — one square
+              in any direction.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
+            Special moves
+          </h3>
+          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Castling</span> — move the
+              king two squares toward a rook; the rook jumps to the other side. Only if neither piece
+              has moved, the path is clear, and the king is not in check.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">En passant</span> — a pawn
+              that just advanced two squares can be captured as if it moved one square.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Promotion</span> — a pawn
+              reaching the far rank becomes a queen, rook, bishop, or knight. This app{' '}
+              <span className="text-gray-800 dark:text-gray-300">auto-promotes to queen</span>.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
+            Check, checkmate &amp; stalemate
+          </h3>
+          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Check</span> — your king is
+              under attack. You must get out of check on your next move.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Checkmate</span> — check with
+              no legal escape. The game is over; the player in checkmate loses.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Stalemate</span> — no legal
+              moves and not in check. The game is a draw.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
+            Game modes in this app
+          </h3>
+          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Play Online</span> — requires
+              internet. Find a random opponent or create/join a room with a share code.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Play Offline</span> — two
+              players on the same device; no internet needed. Pass the device between turns.
+            </li>
+            <li>
+              <span className="font-medium text-gray-800 dark:text-gray-300">Play vs AI</span> — play
+              against Stockfish on your device; works offline.
+            </li>
+          </ul>
+        </div>
+
+        <ul className="space-y-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+          <li>
+            <span className="font-medium text-gray-800 dark:text-gray-300">Sounds.</span> Move, capture,
+            check, and game-end sounds play when sound is enabled in{' '}
+            <Link to="/settings" className="text-emerald-600 hover:underline dark:text-emerald-400">
+              Settings
+            </Link>
+            .
+          </li>
+          <li>
+            <span className="font-medium text-gray-800 dark:text-gray-300">Tips.</span> Only highlighted
+            squares are valid destinations. In Daily Puzzles, off-solution moves show feedback so you
+            can try again. In online games you can{' '}
+            <span className="text-gray-800 dark:text-gray-300">offer a draw</span> or{' '}
+            <span className="text-gray-800 dark:text-gray-300">resign</span> from the game panel.
+          </li>
+        </ul>
+      </div>
+    </details>
+  )
+}
+
 function ChessBoardPattern() {
   return (
     <svg
@@ -311,6 +449,14 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        <HowToPlayChessGuide />
+      </motion.section>
 
       {/* Play modes */}
       <section>
