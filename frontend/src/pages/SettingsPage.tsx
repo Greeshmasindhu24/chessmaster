@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { RootState } from '../store'
 import { setPreferences, setTheme, ThemeMode } from '../store/settingsSlice'
 import { logout, setUser } from '../store/authSlice'
-import { authApi, formatNetworkError, profileApi } from '../services/api'
+import { authApi, billingApi, formatNetworkError, profileApi } from '../services/api'
 import { BOARD_THEMES } from '../config/boardThemes'
 import { ageFromDateOfBirth, countryLabel, genderLabel } from '../config/profileFields'
 import DevEmailLink from '../components/DevEmailLink'
@@ -59,6 +59,11 @@ export default function SettingsPage() {
   const { data: prefs } = useQuery({
     queryKey: ['preferences'],
     queryFn: () => profileApi.getPreferences().then((r) => r.data),
+  })
+
+  const { data: subscriptionPlan } = useQuery({
+    queryKey: ['subscription-plan'],
+    queryFn: () => billingApi.subscriptionPlan().then((r) => r.data),
   })
 
   useEffect(() => {
@@ -348,9 +353,55 @@ export default function SettingsPage() {
         )}
       </SettingsSection>
 
+      <SettingsSection title="Monthly subscription">
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                {subscriptionPlan?.label ?? 'Monthly subscription'}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {subscriptionPlan?.description ??
+                  'Unlock premium features with a simple monthly plan.'}
+              </p>
+              <p className="mt-2 text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                {subscriptionPlan?.price_display ?? '$9.99/mo'}
+              </p>
+            </div>
+            {subscriptionPlan?.available ? (
+              <button type="button" className="btn-primary shrink-0 text-sm" disabled>
+                Subscribe
+              </button>
+            ) : (
+              <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                Coming soon
+              </span>
+            )}
+          </div>
+          {!subscriptionPlan?.stripe_configured && (
+            <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              Secure payments are being set up. You&apos;ll be able to subscribe here once billing
+              is live.
+            </p>
+          )}
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="Notifications">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Stay in the loop for online play — friend requests, match invites, draw offers, and other
+          game updates are delivered promptly so you never miss a move or a challenge.
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Use the bell icon in the header to view recent notifications. Mark them read when
+          you&apos;re caught up.
+        </p>
+      </SettingsSection>
+
       <SettingsSection title="Legal">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Review how we handle your data and the rules for using ChessMaster Pro.
+          Your profile is in safe hands — we respect your privacy. Review how we handle your data
+          and the rules for using ChessMaster Pro.
         </p>
         <div className="flex flex-wrap gap-4 text-sm">
           <Link to="/privacy" className="text-emerald-600 hover:underline dark:text-emerald-400">

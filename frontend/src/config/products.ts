@@ -40,7 +40,7 @@ export const AI_PRODUCTS: ProductTier[] = [
   tier('beginner', 'Beginner', 'Makes occasional mistakes — free for everyone', 0, 1, null),
   tier('intermediate', 'Intermediate', 'Solid club-level play', 499, 2, 'cmp_ai_intermediate'),
   tier('advanced', 'Advanced', 'Strong tactical play', 999, 3, 'cmp_ai_advanced'),
-  tier('expert', 'Expert', 'Best available engine strength', 1499, 4, 'cmp_ai_expert'),
+  tier('expert', 'Expert', 'Strongest computer opponent', 1499, 4, 'cmp_ai_expert'),
 ]
 
 export const ONLINE_PRODUCTS: ProductTier[] = [
@@ -48,7 +48,7 @@ export const ONLINE_PRODUCTS: ProductTier[] = [
     seconds: 60,
     increment: 0,
   }),
-  tier('blitz', 'Blitz 3+2', 'Quick blitz — free for everyone', 0, 2, null, {
+  tier('blitz', 'Quick play 3+2', 'Fast timed games — free for everyone', 0, 2, null, {
     seconds: 180,
     increment: 2,
   }),

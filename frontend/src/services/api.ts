@@ -86,7 +86,7 @@ export function formatNetworkError(err: unknown, action: string): string {
     if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg
     if (axiosErr.response.status === 402) return 'Payment required to unlock this AI level.'
     if (axiosErr.response.status && axiosErr.response.status >= 500) {
-      return `Server error (${action}). Restart .\\run_backend.ps1 and try again.`
+      return `Something went wrong (${action}). Please try again in a moment.`
     }
     return `Request failed (${action}).`
   }
@@ -99,11 +99,11 @@ export function formatNetworkError(err: unknown, action: string): string {
   const onProdWeb = isRenderProductionWeb()
 
   if (remoteApi && import.meta.env.DEV) {
-    return `Cannot reach server (${action}). Local dev must use http://localhost:5173 with .\run_frontend.ps1 (VITE_API_URL empty) and .\run_backend.ps1 on port 8001 — not the Render API. Tried ${attempted}.`
+    return `Cannot reach server (${action}). Check that the app and server are running locally, then try again. Tried ${attempted}.`
   }
 
   if (remoteApi && isBrowserLocalDevHost()) {
-    return `Cannot reach server (${action}). The app is calling ${attempted}, but local dev should use the Vite proxy. Clear VITE_API_URL in frontend/.env.local (leave it empty), restart .\run_frontend.ps1, and run the backend on port 8001 (.\run_backend.ps1). Calling Render from localhost is blocked by CORS.`
+    return `Cannot reach server (${action}). The app may be pointed at the wrong API. Tried ${attempted}.`
   }
 
   if (remoteApi && typeof window !== 'undefined') {
@@ -116,7 +116,7 @@ export function formatNetworkError(err: unknown, action: string): string {
     return `Cannot reach server (${action}). Tried ${attempted}. If the API was sleeping, wait ~1 minute and retry. Otherwise check Render dashboard (chessmaster-api health) and your network connection.`
   }
 
-  return `Cannot reach server (${action}). Tried ${attempted}. Use the Vite dev URL (http://localhost:5173) with the backend on port 8001, or restart .\\run_frontend.ps1 after closing old dev servers.`
+  return `Cannot reach server (${action}). Please check your connection and try again.`
 }
 
 api.interceptors.request.use((config) => {
@@ -252,6 +252,16 @@ export interface DummyPurchaseData {
   cardholder_name: string
 }
 
+export interface SubscriptionPlan {
+  id: string
+  label: string
+  description: string
+  price_cents: number
+  price_display: string
+  stripe_configured: boolean
+  available: boolean
+}
+
 export const billingApi = {
   aiTiers: () => api.get('/billing/ai-tiers'),
   purchaseAiTier: (tier: string, data: DummyPurchaseData) =>
@@ -259,6 +269,7 @@ export const billingApi = {
   onlineTiers: () => api.get('/billing/online-tiers'),
   purchaseOnlineTier: (tier: string, data: DummyPurchaseData) =>
     api.post(`/billing/online-tiers/${tier}/purchase`, data),
+  subscriptionPlan: () => api.get<SubscriptionPlan>('/billing/subscription-plan'),
 }
 
 export interface AnalyzePositionResult {

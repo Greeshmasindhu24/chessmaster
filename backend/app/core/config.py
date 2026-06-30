@@ -126,6 +126,14 @@ class Settings(BaseSettings):
     STOCKFISH_PATH: str = "stockfish/stockfish.exe"
     RATE_LIMIT: str = "100/minute"
 
+    # Stripe (optional — monthly subscription scaffold)
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PRICE_ID_MONTHLY: str = ""
+
+    @property
+    def stripe_configured(self) -> bool:
+        return bool(self.STRIPE_SECRET_KEY.strip() and self.STRIPE_PRICE_ID_MONTHLY.strip())
+
     @cached_property
     def _postgres_url_and_connect_args(self) -> tuple[str, dict]:
         return normalize_postgres_url(self.DATABASE_URL)

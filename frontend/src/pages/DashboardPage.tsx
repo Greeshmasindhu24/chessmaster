@@ -72,7 +72,7 @@ export default function DashboardPage() {
     { label: 'Losses', value: activeProfile?.losses ?? 0, color: 'text-red-400' },
     { label: 'Draws', value: activeProfile?.draws ?? 0, color: 'text-yellow-400' },
     { label: 'Games Played', value: activeProfile?.games_played ?? 0, color: '' },
-    { label: 'Blitz Rating', value: activeProfile?.rating_blitz ?? 1200, color: '' },
+    { label: 'Quick Play Rating', value: activeProfile?.rating_blitz ?? 1200, color: '' },
     {
       label: 'Win Rate',
       value:

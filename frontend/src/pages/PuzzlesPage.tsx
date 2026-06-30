@@ -42,97 +42,6 @@ function createPuzzleState(puzzle: DailyPuzzle): PuzzlePlayState | null {
   }
 }
 
-function HowToPlayGuide() {
-  return (
-    <details className="glass-panel group mb-6 overflow-hidden">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 transition-colors hover:bg-white/[0.03] sm:p-5 [&::-webkit-details-marker]:hidden">
-        <span className="font-semibold text-gray-100">How to play</span>
-        <span
-          className="shrink-0 text-sm text-gray-400 transition-transform group-open:rotate-180"
-          aria-hidden
-        >
-          ▼
-        </span>
-      </summary>
-      <div className="border-t border-white/10 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
-        <ul className="space-y-3 text-sm leading-relaxed text-gray-400">
-          <li>
-            <span className="font-medium text-gray-300">Daily puzzles.</span> You get three puzzles
-            each day — the same three for every player. They refresh at midnight and change
-            tomorrow.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Click to move.</span> Tap a piece (
-            <span className="text-gray-300" aria-hidden>
-              ♙ ♟ ♘ ♞ ♗ ♝ ♖ ♜ ♕ ♛ ♔ ♚
-            </span>
-            ), then tap its destination. Squares are labeled by file{' '}
-            <span className="font-mono text-gray-300">a</span>–
-            <span className="font-mono text-gray-300">h</span> and rank{' '}
-            <span className="font-mono text-gray-300">1</span>–
-            <span className="font-mono text-gray-300">8</span>. Legal squares show as{' '}
-            <span className="text-gray-300">dots</span> on the board.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Correct moves.</span> Your move must match
-            the puzzle&apos;s solution line. Other legal moves show{' '}
-            <span className="text-gray-300">&ldquo;Not the best move&mdash;try again&rdquo;</span>{' '}
-            — keep trying until you find the best line.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Multi-move puzzles.</span> Some puzzles need
-            several moves. After each correct move, the opponent&apos;s reply plays automatically
-            until you finish the full solution.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Hints.</span> Tap{' '}
-            <span className="text-gray-300">Show hint</span> in the sidebar for a text clue. Tap
-            again to hide it.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Reset.</span> Restarts the current puzzle
-            from the starting position so you can replay it.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Progress.</span> Use the{' '}
-            <span className="text-gray-300">Puzzle 1 / 2 / 3</span> tabs to switch puzzles. The{' '}
-            <span className="text-gray-300">X/3 solved</span> counter tracks how many you&apos;ve
-            completed today.
-          </li>
-          <li>
-            <span className="font-medium text-gray-300">Sounds.</span> Move and capture (
-            <span className="font-mono text-gray-300">x</span>) sounds play when sound is enabled in
-            Settings.
-          </li>
-        </ul>
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <h3 className="mb-2 text-sm font-semibold text-gray-200">Notation symbols</h3>
-          <ul className="space-y-1.5 text-sm leading-relaxed text-gray-400">
-            <li>
-              <span className="font-mono font-medium text-gray-300">+</span> — check
-            </li>
-            <li>
-              <span className="font-mono font-medium text-gray-300">#</span> — checkmate
-            </li>
-            <li>
-              <span className="font-mono font-medium text-gray-300">x</span> — capture
-            </li>
-            <li>
-              <span className="font-mono font-medium text-gray-300">O-O</span> — kingside castling
-            </li>
-            <li>
-              <span className="font-mono font-medium text-gray-300">O-O-O</span> — queenside castling
-            </li>
-            <li>
-              <span className="font-mono font-medium text-gray-300">=Q</span> — pawn promotes to queen
-            </li>
-          </ul>
-        </div>
-      </div>
-    </details>
-  )
-}
-
 export default function PuzzlesPage() {
   const puzzles = useMemo(() => getDailyPuzzles(), [])
 
@@ -234,10 +143,9 @@ function PuzzlesPageContent({ puzzles }: { puzzles: DailyPuzzle[] }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-4xl">
       <h1 className="mb-2 text-2xl font-bold">Daily Puzzles</h1>
       <p className="mb-4 text-sm text-gray-400">
-        Three fresh challenges each day from our puzzle bank.
+        Three fresh challenges each day. Tap a piece, then a highlighted square — find the best move
+        for each puzzle.
       </p>
-
-      <HowToPlayGuide />
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {puzzles.map((p, i) => (
@@ -282,6 +190,12 @@ function PuzzlesPageContent({ puzzles }: { puzzles: DailyPuzzle[] }) {
             </h2>
             <p className="mt-1 text-sm font-medium text-gray-300">{puzzle.title}</p>
             <p className="mt-1 text-sm text-gray-400">{sideLabel} to play</p>
+          </div>
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-400">
+              What to look for
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-gray-300">{puzzle.explanation}</p>
           </div>
           <button
             type="button"

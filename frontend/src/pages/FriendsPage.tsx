@@ -92,7 +92,7 @@ export default function FriendsPage() {
               >
                 <div>
                   <span className="font-medium">{u.username}</span>
-                  <span className="ml-2 text-sm text-gray-500">{u.rating_blitz} blitz</span>
+                  <span className="ml-2 text-sm text-gray-500">{u.rating_blitz} quick play</span>
                 </div>
                 {u.friendship_status === 'accepted' ? (
                   <span className="text-sm text-emerald-400">Friends</span>
@@ -162,7 +162,7 @@ export default function FriendsPage() {
                 className="flex items-center justify-between rounded-xl border border-black/10 px-4 py-3 dark:border-white/10"
               >
                 <span className="font-medium">{f.friend?.username}</span>
-                <span className="text-sm text-gray-500">{f.friend?.rating_blitz} blitz</span>
+                <span className="text-sm text-gray-500">{f.friend?.rating_blitz} quick play</span>
               </li>
             ))}
           </ul>

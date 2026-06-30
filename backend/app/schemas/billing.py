@@ -34,3 +34,13 @@ class PurchaseResponse(BaseModel):
     amount_cents: int | None = None
     price_display: str | None = None
     message: str
+
+
+class SubscriptionPlanResponse(BaseModel):
+    id: str
+    label: str
+    description: str
+    price_cents: int
+    price_display: str
+    stripe_configured: bool
+    available: bool

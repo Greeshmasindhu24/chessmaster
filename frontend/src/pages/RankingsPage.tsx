@@ -14,7 +14,11 @@ export default function RankingsPage() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Rankings</h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Blitz leaderboard by rating.</p>
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
+          <span className="font-medium text-gray-700 dark:text-gray-300">Quick Play Rating</span>
+          {' — '}
+          leaderboard for timed quick games.
+        </p>
       </div>
 
       <div className="glass-panel overflow-hidden p-0">
@@ -28,7 +32,7 @@ export default function RankingsPage() {
               <tr>
                 <th className="px-4 py-3">#</th>
                 <th className="px-4 py-3">Player</th>
-                <th className="px-4 py-3">Rating</th>
+                <th className="px-4 py-3">Quick Play</th>
                 <th className="px-4 py-3">Games</th>
                 <th className="px-4 py-3">Wins</th>
               </tr>

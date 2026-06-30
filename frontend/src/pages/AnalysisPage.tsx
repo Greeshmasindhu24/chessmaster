@@ -19,7 +19,7 @@ export default function AnalysisPage() {
   const positionMutation = useMutation({
     mutationFn: () => analysisApi.position(fen, 12).then((r) => r.data),
     onSuccess: (data) => {
-      setStatus(`Engine: ${data.engine} · Best: ${data.best_move_san ?? '—'}`)
+      setStatus(`Best: ${data.best_move_san ?? '—'}`)
     },
     onError: (err) => setStatus(formatNetworkError(err, 'analyze position')),
   })
@@ -31,7 +31,7 @@ export default function AnalysisPage() {
         : analysisApi.game({ pgn: pgnInput, depth: 10 }).then((r) => r.data),
     onSuccess: (data) => {
       setStatus(
-        `Analyzed ${data.moves.length} moves · Avg loss ${data.average_cp_loss ?? '—'} cp · ${data.engine}`,
+        `Analyzed ${data.moves.length} moves · Avg loss ${data.average_cp_loss ?? '—'} cp`,
       )
     },
     onError: (err) => setStatus(formatNetworkError(err, 'analyze game')),
@@ -53,7 +53,7 @@ export default function AnalysisPage() {
       <div>
         <h1 className="text-3xl font-bold">Game Analysis</h1>
         <p className="mt-1 text-gray-500 dark:text-gray-400">
-          Stockfish-powered evaluation, best moves, and move quality for positions and games.
+          In-depth evaluation, best moves, and move quality for positions and games.
         </p>
       </div>
 

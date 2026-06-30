@@ -464,8 +464,8 @@ export default function PlayOnlinePage() {
             </div>
             <p className="mt-2 text-xs text-gray-500">
               {hideDummyBilling
-                ? 'Blitz 3+2 is free. Other time controls coming in a future update.'
-                : 'Blitz 3+2 is free. Other time controls are separate one-time purchases — buy any tier individually.'}
+                ? 'Quick play 3+2 is free. Other time controls coming in a future update.'
+                : 'Quick play 3+2 is free. Other time controls are separate one-time purchases — buy any tier individually.'}
             </p>
           </div>
 
@@ -489,11 +489,6 @@ export default function PlayOnlinePage() {
               </>
             )}
           </div>
-
-          <p className="text-xs text-gray-500">
-            Find Random Match pairs you with another waiting player. Create Room + share a code
-            to play a specific friend. Requires the backend (.\run_backend.ps1) and a logged-in account.
-          </p>
 
           <div className="flex gap-2">
             <input

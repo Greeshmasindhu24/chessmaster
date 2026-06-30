@@ -27,7 +27,7 @@ AI_TIER_CATALOG: dict[str, dict] = {
     },
     "expert": {
         "label": "Expert",
-        "description": "Best available engine strength",
+        "description": "Strongest computer opponent",
         "price_cents": 1499,
         "level": 4,
         "google_play_product_id": "cmp_ai_expert",
@@ -48,8 +48,8 @@ ONLINE_TIER_CATALOG: dict[str, dict] = {
         "google_play_product_id": "cmp_online_bullet",
     },
     "blitz": {
-        "label": "Blitz 3+2",
-        "description": "Quick blitz — free for everyone",
+        "label": "Quick play 3+2",
+        "description": "Fast timed games — free for everyone",
         "price_cents": 0,
         "level": 2,
         "time_control_seconds": 180,
