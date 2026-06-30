@@ -66,7 +66,7 @@ export const DAILY_PUZZLE_BANK: DailyPuzzle[] = [
   {
     id: 'promotion-tactic',
     title: 'Push the passer',
-    fen: '8/4P3/8/8/8/8/8/4K3 w - - 0 1',
+    fen: '4k3/4P3/8/8/8/8/8/4K3 w - - 0 1',
     solution: ['e7e8q'],
     hint: 'Advance the pawn.',
   },
