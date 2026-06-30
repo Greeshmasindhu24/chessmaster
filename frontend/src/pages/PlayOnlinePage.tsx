@@ -94,6 +94,21 @@ export default function PlayOnlinePage() {
     return `Join me for a ${presetLabel} game on ChessMaster Pro! Room code: ${createdRoomCode}`
   }, [createdRoomCode, selectedPreset])
 
+  const shareLinks = useMemo(() => {
+    const body = encodeURIComponent(shareMessage)
+    const subject = encodeURIComponent('Join my chess game on ChessMaster Pro')
+    return {
+      whatsapp: `https://wa.me/?text=${body}`,
+      sms: `sms:?body=${body}`,
+      email: `mailto:?subject=${subject}&body=${body}`,
+    }
+  }, [shareMessage])
+
+  const canNativeShare = useMemo(
+    () => typeof navigator !== 'undefined' && typeof navigator.share === 'function',
+    [],
+  )
+
   const refreshTiers = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['online-tiers'] })
   }, [queryClient])
@@ -364,6 +379,20 @@ export default function PlayOnlinePage() {
     }
   }
 
+  const shareNative = async () => {
+    if (!shareMessage) return
+    try {
+      await navigator.share({
+        title: 'ChessMaster Pro',
+        text: shareMessage,
+      })
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setStatus('Could not share — try copying the code instead')
+      }
+    }
+  }
+
   useEffect(() => {
     if (!autoMatch || autoMatchStarted.current || !isOnline || !selectedPreset) return
     if (phase !== 'lobby') return
@@ -549,31 +578,53 @@ export default function PlayOnlinePage() {
             <>
               <h2 className="mb-2 text-lg font-semibold text-white">Your game room is ready</h2>
               <p className="mb-6 text-sm text-gray-400">
-                Send the code below to your friend. When they join, the game starts automatically.
+                When your friend joins, the game starts automatically.
               </p>
               <p className="mb-1 text-xs uppercase tracking-wide text-gray-500">Room code</p>
-              <p className="mb-4 font-mono text-4xl font-bold tracking-[0.3em] text-emerald-400">
+              <p className="mb-3 font-mono text-4xl font-bold tracking-[0.3em] text-emerald-400">
                 {createdRoomCode}
               </p>
-              <div className="mb-6 flex flex-wrap justify-center gap-3">
+              <p className="mb-4 text-sm text-gray-400">
+                Send this code to your friend using any app below
+              </p>
+              <div className="mb-6 flex flex-wrap justify-center gap-2">
+                {canNativeShare && (
+                  <button
+                    type="button"
+                    onClick={shareNative}
+                    className="btn-secondary px-4 py-2 text-sm"
+                  >
+                    Share
+                  </button>
+                )}
+                <a
+                  href={shareLinks.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary px-4 py-2 text-sm"
+                >
+                  WhatsApp
+                </a>
+                <a href={shareLinks.sms} className="btn-secondary px-4 py-2 text-sm">
+                  SMS
+                </a>
+                <a href={shareLinks.email} className="btn-secondary px-4 py-2 text-sm">
+                  Email
+                </a>
                 <button
                   type="button"
                   onClick={() => copyText(createdRoomCode, 'code')}
-                  className="btn-primary"
+                  className="btn-secondary px-4 py-2 text-sm"
                 >
-                  {copied === 'code' ? 'Copied!' : 'Copy code'}
+                  {copied === 'code' ? 'Copied!' : 'Copy'}
                 </button>
                 <button
                   type="button"
                   onClick={() => copyText(shareMessage, 'share')}
-                  className="btn-secondary"
+                  className="btn-secondary px-4 py-2 text-sm"
                 >
-                  {copied === 'share' ? 'Copied!' : 'Copy invite message'}
+                  {copied === 'share' ? 'Copied!' : 'Copy invite'}
                 </button>
-              </div>
-              <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-4 text-left text-sm text-gray-300">
-                <p className="mb-1 text-xs text-gray-500">Message to send your friend:</p>
-                <p>{shareMessage}</p>
               </div>
               <p className="mb-4 text-sm text-emerald-400">{status}</p>
               <button type="button" onClick={cancelWaiting} className="btn-secondary">
