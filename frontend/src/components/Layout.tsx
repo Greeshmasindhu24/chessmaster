@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { RootState } from '../store'
@@ -8,9 +8,7 @@ import UserNavActions from './UserNavActions'
 export default function Layout() {
   const { isAuthenticated } = useSelector((s: RootState) => s.auth)
   const theme = useSelector((s: RootState) => s.settings.theme)
-  const location = useLocation()
   const isDark = theme === 'dark'
-  const isLanding = location.pathname === '/'
 
   return (
     <div
@@ -37,12 +35,10 @@ export default function Layout() {
 
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
-              isLanding ? null : (
-                <>
-                  <HeaderNavLinks />
-                  <UserNavActions />
-                </>
-              )
+              <>
+                <HeaderNavLinks />
+                <UserNavActions />
+              </>
             ) : (
               <>
                 <Link
