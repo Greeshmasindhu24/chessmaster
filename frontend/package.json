@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "validate:puzzles": "node scripts/validate-puzzles.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync android",

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import ClickChessboard from '../components/ClickChessboard'
 import { cloneChess } from '../utils/chessDisplay'
 import { getDailyPuzzles, type DailyPuzzle } from '../utils/dailyPuzzle'
+import { validatePuzzle } from '../utils/puzzleValidation'
 import { useChessSounds } from '../hooks/useChessSounds'
 
 function moveToUci(from: Square, to: Square, promotion?: string): string {
@@ -19,14 +20,25 @@ interface PuzzlePlayState {
   showHint: boolean
 }
 
-function createPuzzleState(puzzle: DailyPuzzle): PuzzlePlayState {
-  return {
-    game: new Chess(puzzle.fen),
-    fen: puzzle.fen,
-    moveIndex: 0,
-    solved: false,
-    status: 'Find the best move',
-    showHint: false,
+function createPuzzleState(puzzle: DailyPuzzle): PuzzlePlayState | null {
+  const validation = validatePuzzle(puzzle)
+  if (!validation.valid) {
+    console.warn(`Skipping invalid puzzle "${puzzle.id}":`, validation.issues.join('; '))
+    return null
+  }
+
+  try {
+    return {
+      game: new Chess(puzzle.fen),
+      fen: puzzle.fen,
+      moveIndex: 0,
+      solved: false,
+      status: 'Find the best move',
+      showHint: false,
+    }
+  } catch {
+    console.warn(`Skipping invalid puzzle "${puzzle.id}": could not load FEN`)
+    return null
   }
 }
 
@@ -108,7 +120,9 @@ export default function PuzzlesPage() {
 function PuzzlesPageContent({ puzzles }: { puzzles: DailyPuzzle[] }) {
   const { playAfterMove } = useChessSounds()
   const [activeIndex, setActiveIndex] = useState(0)
-  const [states, setStates] = useState<PuzzlePlayState[]>(() => puzzles.map(createPuzzleState))
+  const [states, setStates] = useState<PuzzlePlayState[]>(() =>
+    puzzles.map(createPuzzleState).filter((state): state is PuzzlePlayState => state !== null),
+  )
 
   const puzzle = puzzles[activeIndex]
   const { game, fen, solved, status, showHint } = states[activeIndex]
@@ -116,9 +130,9 @@ function PuzzlesPageContent({ puzzles }: { puzzles: DailyPuzzle[] }) {
   const allSolved = solvedCount === puzzles.length
 
   const resetPuzzle = useCallback(() => {
-    setStates((prev) =>
-      prev.map((s, i) => (i === activeIndex ? createPuzzleState(puzzles[i]) : s)),
-    )
+    const next = createPuzzleState(puzzles[activeIndex])
+    if (!next) return
+    setStates((prev) => prev.map((s, i) => (i === activeIndex ? next : s)))
   }, [activeIndex, puzzles])
 
   const onMove = useCallback(
