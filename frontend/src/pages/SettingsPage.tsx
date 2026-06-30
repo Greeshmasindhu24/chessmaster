@@ -31,6 +31,7 @@ export default function SettingsPage() {
 
   const [biography, setBiography] = useState(user?.profile?.biography ?? '')
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatar_url ?? '')
+  const [editingProfile, setEditingProfile] = useState(false)
   const [profileMsg, setProfileMsg] = useState('')
   const [profileErr, setProfileErr] = useState('')
   const [deleteErr, setDeleteErr] = useState('')
@@ -95,6 +96,7 @@ export default function SettingsPage() {
     onSuccess: async () => {
       setProfileMsg('Profile saved.')
       setProfileErr('')
+      setEditingProfile(false)
       const { data } = await authApi.me()
       dispatch(setUser(data))
     },
@@ -130,6 +132,14 @@ export default function SettingsPage() {
   const handleBoardThemeChange = (themeId: string) => {
     dispatch(setPreferences({ board_theme: themeId }))
     prefsMutation.mutate({ board_theme: themeId })
+  }
+
+  const handleProfileCancel = () => {
+    setBiography(user?.profile?.biography ?? '')
+    setAvatarUrl(user?.profile?.avatar_url ?? '')
+    setProfileMsg('')
+    setProfileErr('')
+    setEditingProfile(false)
   }
 
   const handleProfileSubmit = (e: FormEvent) => {
@@ -225,6 +235,14 @@ export default function SettingsPage() {
       <SettingsSection title="Profile">
         <div className="mb-4 grid gap-2 rounded-lg bg-black/5 p-4 text-sm dark:bg-white/5">
           <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Username</span>
+            <span>{user?.username ?? '—'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Email</span>
+            <span className="truncate pl-4 text-right">{user?.email ?? '—'}</span>
+          </div>
+          <div className="flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">Date of birth</span>
             <span>{user?.profile?.date_of_birth ?? '—'}</span>
           </div>
@@ -244,49 +262,90 @@ export default function SettingsPage() {
             <span className="text-gray-500 dark:text-gray-400">Country</span>
             <span>{countryLabel(user?.profile?.country)}</span>
           </div>
+          {!editingProfile && (
+            <>
+              {user?.profile?.avatar_url && (
+                <div className="flex justify-between gap-4 pt-1">
+                  <span className="shrink-0 text-gray-500 dark:text-gray-400">Avatar</span>
+                  <img
+                    src={user.profile.avatar_url}
+                    alt=""
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex justify-between gap-4">
+                <span className="shrink-0 text-gray-500 dark:text-gray-400">Bio</span>
+                <span className="text-right">{user?.profile?.biography?.trim() || '—'}</span>
+              </div>
+            </>
+          )}
           <p className="pt-1 text-xs text-gray-500">
             Demographics are set at registration and cannot be changed here.
           </p>
         </div>
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
-          {profileErr && (
-            <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">{profileErr}</div>
-          )}
-          {profileMsg && (
-            <div className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-              {profileMsg}
-            </div>
-          )}
-          <div>
-            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Username</label>
-            <input className="input-field opacity-60" value={user?.username ?? ''} disabled />
+
+        {profileMsg && !editingProfile && (
+          <div className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+            {profileMsg}
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Email</label>
-            <input className="input-field opacity-60" value={user?.email ?? ''} disabled />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Avatar URL</label>
-            <input
-              className="input-field"
-              placeholder="https://..."
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Bio</label>
-            <textarea
-              className="input-field min-h-[80px]"
-              value={biography}
-              onChange={(e) => setBiography(e.target.value)}
-              maxLength={2000}
-            />
-          </div>
-          <button type="submit" disabled={profileMutation.isPending} className="btn-primary">
-            {profileMutation.isPending ? 'Saving...' : 'Save profile'}
+        )}
+
+        {!editingProfile ? (
+          <button
+            type="button"
+            onClick={() => {
+              setProfileMsg('')
+              setProfileErr('')
+              setEditingProfile(true)
+            }}
+            className="btn-secondary text-sm"
+          >
+            Edit profile
           </button>
-        </form>
+        ) : (
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            {profileErr && (
+              <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">{profileErr}</div>
+            )}
+            {profileMsg && (
+              <div className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+                {profileMsg}
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Avatar URL</label>
+              <input
+                className="input-field"
+                placeholder="https://..."
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-500 dark:text-gray-400">Bio</label>
+              <textarea
+                className="input-field min-h-[80px]"
+                value={biography}
+                onChange={(e) => setBiography(e.target.value)}
+                maxLength={2000}
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" disabled={profileMutation.isPending} className="btn-primary">
+                {profileMutation.isPending ? 'Saving...' : 'Save profile'}
+              </button>
+              <button
+                type="button"
+                onClick={handleProfileCancel}
+                disabled={profileMutation.isPending}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </SettingsSection>
 
       <SettingsSection title="Legal">
