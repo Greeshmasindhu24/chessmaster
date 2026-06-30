@@ -32,6 +32,20 @@ function createPuzzleState(puzzle: DailyPuzzle): PuzzlePlayState {
 
 export default function PuzzlesPage() {
   const puzzles = useMemo(() => getDailyPuzzles(), [])
+
+  if (puzzles.length === 0) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-4xl">
+        <h1 className="mb-2 text-2xl font-bold">Daily Puzzles</h1>
+        <p className="text-sm text-gray-400">No puzzles available right now. Check back soon.</p>
+      </motion.div>
+    )
+  }
+
+  return <PuzzlesPageContent puzzles={puzzles} />
+}
+
+function PuzzlesPageContent({ puzzles }: { puzzles: DailyPuzzle[] }) {
   const { playAfterMove } = useChessSounds()
   const [activeIndex, setActiveIndex] = useState(0)
   const [states, setStates] = useState<PuzzlePlayState[]>(() => puzzles.map(createPuzzleState))
