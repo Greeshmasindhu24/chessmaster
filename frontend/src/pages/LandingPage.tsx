@@ -64,6 +64,26 @@ const socialModes = [
 
 const floatingPieces = ['♔', '♕', '♖', '♗', '♘', '♙']
 
+const CHESS_PIECES = {
+  pawn: '♙',
+  rook: '♖',
+  knight: '♘',
+  bishop: '♗',
+  queen: '♕',
+  king: '♔',
+} as const
+
+function PieceLabel({ symbol, name }: { symbol: string; name: string }) {
+  return (
+    <span className="font-medium text-gray-800 dark:text-gray-300">
+      <span className="mr-1 text-base leading-none" aria-hidden>
+        {symbol}
+      </span>
+      {name}
+    </span>
+  )
+}
+
 function HowToPlayChessGuide() {
   return (
     <details className="glass-panel group mx-auto max-w-4xl overflow-hidden">
@@ -92,28 +112,27 @@ function HowToPlayChessGuide() {
           </h3>
           <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Pawn</span> — one square
-              forward; two squares from its starting rank; captures diagonally.
+              <PieceLabel symbol={CHESS_PIECES.pawn} name="Pawn" /> — one square forward; two squares
+              from its starting rank; captures diagonally.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Rook</span> — any number
-              of squares straight (horizontal or vertical).
+              <PieceLabel symbol={CHESS_PIECES.rook} name="Rook" /> — any number of squares straight
+              (horizontal or vertical).
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Knight</span> — an L-shape
-              (two squares one way, one square sideways); the only piece that can jump over others.
+              <PieceLabel symbol={CHESS_PIECES.knight} name="Knight" /> — an L-shape (two squares one
+              way, one square sideways); the only piece that can jump over others.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Bishop</span> — any number
-              of squares diagonally.
+              <PieceLabel symbol={CHESS_PIECES.bishop} name="Bishop" /> — any number of squares
+              diagonally.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Queen</span> — any number
-              of squares in any straight line (combines rook and bishop).
+              <PieceLabel symbol={CHESS_PIECES.queen} name="Queen" /> — any number of squares in any
+              straight line (combines rook and bishop).
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">King</span> — one square
-              in any direction.
+              <PieceLabel symbol={CHESS_PIECES.king} name="King" /> — one square in any direction.
             </li>
           </ul>
         </div>
@@ -124,17 +143,23 @@ function HowToPlayChessGuide() {
           </h3>
           <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Castling</span> — move the
-              king two squares toward a rook; the rook jumps to the other side. Only if neither piece
-              has moved, the path is clear, and the king is not in check.
+              <span className="font-medium text-gray-800 dark:text-gray-300">Castling</span> — move the{' '}
+              <span aria-hidden>{CHESS_PIECES.king}</span> king two squares toward a{' '}
+              <span aria-hidden>{CHESS_PIECES.rook}</span> rook; the rook jumps to the other side. Only
+              if neither piece has moved, the path is clear, and the king is not in check.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">En passant</span> — a pawn
-              that just advanced two squares can be captured as if it moved one square.
+              <span className="font-medium text-gray-800 dark:text-gray-300">En passant</span> — a{' '}
+              <span aria-hidden>{CHESS_PIECES.pawn}</span> pawn that just advanced two squares can be
+              captured as if it moved one square.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Promotion</span> — a pawn
-              reaching the far rank becomes a queen, rook, bishop, or knight. This app{' '}
+              <span className="font-medium text-gray-800 dark:text-gray-300">Promotion</span> — a{' '}
+              <span aria-hidden>{CHESS_PIECES.pawn}</span> pawn reaching the far rank becomes a{' '}
+              <span aria-hidden>{CHESS_PIECES.queen}</span> queen,{' '}
+              <span aria-hidden>{CHESS_PIECES.rook}</span> rook,{' '}
+              <span aria-hidden>{CHESS_PIECES.bishop}</span> bishop, or{' '}
+              <span aria-hidden>{CHESS_PIECES.knight}</span> knight. This app{' '}
               <span className="text-gray-800 dark:text-gray-300">auto-promotes to queen</span>.
             </li>
           </ul>
@@ -146,12 +171,22 @@ function HowToPlayChessGuide() {
           </h3>
           <ul className="space-y-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Check</span> — your king is
-              under attack. You must get out of check on your next move.
+              <span className="font-medium text-gray-800 dark:text-gray-300">
+                <span className="mr-1" aria-hidden>
+                  {CHESS_PIECES.king}
+                </span>
+                Check
+              </span>{' '}
+              — your king is under attack. You must get out of check on your next move.
             </li>
             <li>
-              <span className="font-medium text-gray-800 dark:text-gray-300">Checkmate</span> — check with
-              no legal escape. The game is over; the player in checkmate loses.
+              <span className="font-medium text-gray-800 dark:text-gray-300">
+                <span className="mr-1" aria-hidden>
+                  {CHESS_PIECES.king}
+                </span>
+                Checkmate
+              </span>{' '}
+              — check with no legal escape. The game is over; the player in checkmate loses.
             </li>
             <li>
               <span className="font-medium text-gray-800 dark:text-gray-300">Stalemate</span> — no legal

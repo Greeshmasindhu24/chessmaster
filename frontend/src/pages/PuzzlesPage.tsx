@@ -62,8 +62,11 @@ function HowToPlayGuide() {
             tomorrow.
           </li>
           <li>
-            <span className="font-medium text-gray-300">Click to move.</span> Tap a piece, then tap
-            its destination. Pieces cannot be dragged. Legal squares show as{' '}
+            <span className="font-medium text-gray-300">Click to move.</span> Tap a piece (
+            <span className="text-gray-300" aria-hidden>
+              ♙♘♗♖♕♔
+            </span>
+            ), then tap its destination. Pieces cannot be dragged. Legal squares show as{' '}
             <span className="text-gray-300">dots</span> on the board.
           </li>
           <li>

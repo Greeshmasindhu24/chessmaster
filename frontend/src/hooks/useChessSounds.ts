@@ -1,11 +1,21 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { Chess, Move } from 'chess.js'
 import { RootState } from '../store'
-import { playMoveSound, soundKindForMove, type MoveSoundKind } from '../utils/chessSounds'
+import { playMoveSound, soundKindForMove, unlockAudio, type MoveSoundKind } from '../utils/chessSounds'
 
 export function useChessSounds() {
   const soundEnabled = useSelector((s: RootState) => s.settings.soundEnabled)
+
+  useEffect(() => {
+    const unlock = () => unlockAudio()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
 
   const playAfterMove = useCallback(
     (chess: Chess, move: Move) => {
