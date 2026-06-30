@@ -44,6 +44,7 @@ export default function PlayOnlinePage() {
   const [selectedPreset, setSelectedPreset] = useState<TimePreset | null>(null)
   const [roomCodeInput, setRoomCodeInput] = useState('')
   const [createdRoomCode, setCreatedRoomCode] = useState('')
+  const [copied, setCopied] = useState<'code' | 'share' | null>(null)
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null)
   const [chess, setChess] = useState(() => new Chess())
   const [fen, setFen] = useState(new Chess().fen())
@@ -86,6 +87,12 @@ export default function PlayOnlinePage() {
 
   const selectedTierInfo = onlineTiers.find((t) => t.id === selectedPreset?.tier)
   const isPresetUnlocked = selectedTierInfo?.unlocked ?? true
+
+  const shareMessage = useMemo(() => {
+    if (!createdRoomCode) return ''
+    const presetLabel = selectedPreset?.label ?? 'chess'
+    return `Join me for a ${presetLabel} game on ChessMaster Pro! Room code: ${createdRoomCode}`
+  }, [createdRoomCode, selectedPreset])
 
   const refreshTiers = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['online-tiers'] })
@@ -287,7 +294,7 @@ export default function PlayOnlinePage() {
     })
     setOrientation('white')
     setPhase('waiting')
-    setStatus(`Room created — share code: ${data.room_code}`)
+    setStatus('Waiting for your friend to join')
     gameSocket.joinGame(data.id)
     } catch (err) {
       if (!hideDummyBilling && (err as { response?: { status?: number } }).response?.status === 402 && selectedTierInfo) {
@@ -314,7 +321,7 @@ export default function PlayOnlinePage() {
     setOrientation('black')
     applyFen(data.fen)
     setPhase('playing')
-    setStatus('Joined game — your move if black')
+    setStatus('Game started!')
     gameSocket.joinGame(data.id)
     } catch (err) {
       setStatus(formatNetworkError(err, 'join room') || 'Could not join room')
@@ -337,6 +344,24 @@ export default function PlayOnlinePage() {
     gameSocket.cancelMatchmaking(selectedPreset.seconds, selectedPreset.increment)
     setPhase('lobby')
     setStatus('Matchmaking cancelled')
+  }
+
+  const cancelWaiting = () => {
+    if (createdRoomCode) {
+      backToLobby()
+      return
+    }
+    cancelSearch()
+  }
+
+  const copyText = async (text: string, kind: 'code' | 'share') => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(kind)
+      window.setTimeout(() => setCopied(null), 2000)
+    } catch {
+      setStatus('Could not copy automatically — select the text and copy it manually')
+    }
   }
 
   useEffect(() => {
@@ -469,52 +494,100 @@ export default function PlayOnlinePage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            {!hideDummyBilling && !isPresetUnlocked && selectedTierInfo?.requires_payment ? (
-              <button
-                type="button"
-                onClick={() => setUpgradeTier(selectedTierInfo)}
-                className="btn-primary"
-              >
-                {buyLabel(selectedTierInfo.label, selectedTierInfo.price_cents)}
-              </button>
-            ) : (
-              <>
-            <button type="button" onClick={findMatch} className="btn-primary" disabled={!selectedPreset || !isOnline}>
-              Find Random Match
-            </button>
-            <button type="button" onClick={createRoom} className="btn-secondary" disabled={!selectedPreset || !isOnline}>
-              Create Room
-            </button>
-              </>
-            )}
+          <div>
+            <label className="mb-2 block text-sm text-gray-400">Quick match</label>
+            <div className="flex flex-wrap gap-3">
+              {!hideDummyBilling && !isPresetUnlocked && selectedTierInfo?.requires_payment ? (
+                <button
+                  type="button"
+                  onClick={() => setUpgradeTier(selectedTierInfo)}
+                  className="btn-primary"
+                >
+                  {buyLabel(selectedTierInfo.label, selectedTierInfo.price_cents)}
+                </button>
+              ) : (
+                <>
+                  <button type="button" onClick={findMatch} className="btn-primary" disabled={!selectedPreset || !isOnline}>
+                    Find Random Match
+                  </button>
+                  <button type="button" onClick={createRoom} className="btn-secondary" disabled={!selectedPreset || !isOnline}>
+                    Create Room
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Create a room to get a code you can share with a friend.
+            </p>
           </div>
 
-          <div className="flex gap-2">
-            <input
-              value={roomCodeInput}
-              onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-              placeholder="Room code"
-              className="input-field flex-1 uppercase"
-              maxLength={8}
-              disabled={!isOnline}
-            />
-            <button onClick={joinRoom} className="btn-secondary" disabled={!isOnline}>
-              Join
-            </button>
+          <div>
+            <label className="mb-2 block text-sm text-gray-400">Join a friend&apos;s room</label>
+            <div className="flex gap-2">
+              <input
+                value={roomCodeInput}
+                onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
+                placeholder="Enter room code"
+                className="input-field flex-1 uppercase"
+                maxLength={8}
+                disabled={!isOnline}
+              />
+              <button onClick={joinRoom} className="btn-secondary" disabled={!isOnline || !roomCodeInput.trim()}>
+                Join Room
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Ask your friend for their 6-letter room code, then paste it here.
+            </p>
           </div>
         </div>
       )}
 
       {phase === 'waiting' && (
         <div className="glass-panel mb-6 p-6 text-center">
-          <p className="mb-4 text-emerald-400">{status}</p>
-          {createdRoomCode && (
-            <p className="mb-4 font-mono text-2xl tracking-widest">{createdRoomCode}</p>
+          {createdRoomCode ? (
+            <>
+              <h2 className="mb-2 text-lg font-semibold text-white">Your game room is ready</h2>
+              <p className="mb-6 text-sm text-gray-400">
+                Send the code below to your friend. When they join, the game starts automatically.
+              </p>
+              <p className="mb-1 text-xs uppercase tracking-wide text-gray-500">Room code</p>
+              <p className="mb-4 font-mono text-4xl font-bold tracking-[0.3em] text-emerald-400">
+                {createdRoomCode}
+              </p>
+              <div className="mb-6 flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => copyText(createdRoomCode, 'code')}
+                  className="btn-primary"
+                >
+                  {copied === 'code' ? 'Copied!' : 'Copy code'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyText(shareMessage, 'share')}
+                  className="btn-secondary"
+                >
+                  {copied === 'share' ? 'Copied!' : 'Copy invite message'}
+                </button>
+              </div>
+              <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-4 text-left text-sm text-gray-300">
+                <p className="mb-1 text-xs text-gray-500">Message to send your friend:</p>
+                <p>{shareMessage}</p>
+              </div>
+              <p className="mb-4 text-sm text-emerald-400">{status}</p>
+              <button type="button" onClick={cancelWaiting} className="btn-secondary">
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="mb-4 text-emerald-400">{status}</p>
+              <button type="button" onClick={cancelSearch} className="btn-secondary">
+                Cancel search
+              </button>
+            </>
           )}
-          <button onClick={cancelSearch} className="btn-secondary">
-            Cancel
-          </button>
         </div>
       )}
 
@@ -579,10 +652,10 @@ export default function PlayOnlinePage() {
               selectableColor={gameInfo.color === 'white' ? 'w' : 'b'}
             />
             <p className="mt-3 text-xs text-gray-500">
-              Room {gameInfo.roomCode} · You play {gameInfo.color}
+              You play {gameInfo.color}
               {gameInfo.opponent ? ` vs ${gameInfo.opponent}` : ''}
               {isMyTurn
-                ? ' · Click a piece, then a highlighted square'
+                ? ' · Your turn — click a piece, then a highlighted square'
                 : ' · Waiting for opponent'}
             </p>
           </div>
