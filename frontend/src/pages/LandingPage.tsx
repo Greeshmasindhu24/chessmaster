@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import EmailVerificationBadge from '../components/EmailVerificationBadge'
+import QuickNavLinks from '../components/QuickNavLinks'
+import UserNavActions from '../components/UserNavActions'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 const playModes = [
@@ -165,6 +167,25 @@ export default function LandingPage() {
           </Link>{' '}
           to keep playing.
         </div>
+      )}
+
+      {isAuthenticated && (
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-panel p-6"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your hub</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Account, notifications, and quick navigation
+              </p>
+            </div>
+            <UserNavActions className="justify-start lg:justify-end" />
+          </div>
+          <QuickNavLinks className="mt-4" />
+        </motion.section>
       )}
 
       {/* Hero */}
@@ -368,28 +389,6 @@ export default function LandingPage() {
             />
           ))}
         </div>
-
-        {isAuthenticated && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-8 flex flex-wrap justify-center gap-3"
-          >
-            <Link to="/rankings" className="btn-secondary">
-              Rankings
-            </Link>
-            <Link to="/friends" className="btn-secondary">
-              Friends
-            </Link>
-            <Link to="/puzzles" className="btn-secondary">
-              Puzzles
-            </Link>
-            <Link to="/dashboard" className="btn-primary">
-              Dashboard
-            </Link>
-          </motion.div>
-        )}
       </section>
     </div>
   )

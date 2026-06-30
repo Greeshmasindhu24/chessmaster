@@ -1,47 +1,16 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { RootState } from '../store'
-import { logout, setUser } from '../store/authSlice'
-import { authApi } from '../services/api'
-import EmailVerificationBadge from './EmailVerificationBadge'
-import NotificationBell from './NotificationBell'
+import HeaderNavLinks from './HeaderNavLinks'
+import UserNavActions from './UserNavActions'
 
 export default function Layout() {
-  const { isAuthenticated, user, refreshToken } = useSelector((s: RootState) => s.auth)
+  const { isAuthenticated } = useSelector((s: RootState) => s.auth)
   const theme = useSelector((s: RootState) => s.settings.theme)
-  const dispatch = useDispatch()
-  const navigate = useNavigate()
+  const location = useLocation()
   const isDark = theme === 'dark'
-
-  const { data: freshUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => authApi.me().then((r) => r.data),
-    enabled: isAuthenticated,
-    refetchInterval: 30000,
-  })
-
-  useEffect(() => {
-    if (freshUser) {
-      dispatch(setUser(freshUser))
-    }
-  }, [freshUser, dispatch])
-
-  const activeUser = freshUser ?? user
-
-  const handleLogout = async () => {
-    if (refreshToken) {
-      try {
-        await authApi.logout(refreshToken)
-      } catch {
-        /* ignore */
-      }
-    }
-    dispatch(logout())
-    navigate('/')
-  }
+  const isLanding = location.pathname === '/'
 
   return (
     <div
@@ -68,62 +37,12 @@ export default function Layout() {
 
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  to="/play/ai"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  vs AI
-                </Link>
-                <Link
-                  to="/play/online"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Online
-                </Link>
-                <Link
-                  to="/puzzles"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Puzzles
-                </Link>
-                <Link
-                  to="/friends"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Friends
-                </Link>
-                <Link
-                  to="/rankings"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Rankings
-                </Link>
-                <Link
-                  to="/play"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Offline
-                </Link>
-                <Link
-                  to="/settings"
-                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  Settings
-                </Link>
-                <EmailVerificationBadge user={activeUser} variant="nav" />
-                <NotificationBell />
-                <span className="text-sm text-emerald-600 dark:text-emerald-400">{activeUser?.username}</span>
-                <button onClick={handleLogout} className="btn-secondary py-2 text-sm">
-                  Logout
-                </button>
-              </>
+              isLanding ? null : (
+                <>
+                  <HeaderNavLinks />
+                  <UserNavActions />
+                </>
+              )
             ) : (
               <>
                 <Link
