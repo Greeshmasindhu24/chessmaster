@@ -1,14 +1,7 @@
-import puzzles from '../data/dailyPuzzles.json'
+import { DAILY_PUZZLE_BANK, type DailyPuzzle } from '../data/dailyPuzzles'
 
+export type { DailyPuzzle }
 export const DAILY_PUZZLE_COUNT = 3
-
-export interface DailyPuzzle {
-  id: string
-  title: string
-  fen: string
-  solution: string[]
-  hint: string
-}
 
 function dateHash(dateStr: string): number {
   let hash = 0
@@ -19,7 +12,7 @@ function dateHash(dateStr: string): number {
 }
 
 export function getDailyPuzzles(): DailyPuzzle[] {
-  const bank = puzzles as DailyPuzzle[]
+  const bank = DAILY_PUZZLE_BANK
   const today = new Date().toISOString().slice(0, 10)
   const hash = dateHash(today)
   const count = Math.min(DAILY_PUZZLE_COUNT, bank.length)
