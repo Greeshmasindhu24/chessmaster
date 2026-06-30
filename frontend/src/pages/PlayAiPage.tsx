@@ -665,9 +665,9 @@ export default function PlayAiPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
 
-          <div className="glass-panel p-6">
+          <div className="glass-panel p-3 sm:p-6">
 
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between sm:mb-4">
 
               <span className="font-medium text-emerald-400">{status}</span>
 
@@ -691,7 +691,9 @@ export default function PlayAiPage() {
 
               boardOrientation={playerColor}
 
-              boardWidth={Math.min(520, window.innerWidth - 64)}
+              maxBoardWidth={520}
+
+              reservedHeight={300}
 
               interactive={isMyTurn}
 
@@ -711,7 +713,7 @@ export default function PlayAiPage() {
 
 
 
-          <div className="glass-panel flex min-h-[320px] flex-col p-4 lg:min-h-0">
+          <div className="glass-panel flex flex-col p-4 lg:min-h-0">
 
             <MoveHistory chess={chess} className="min-h-0 flex-1" />
 

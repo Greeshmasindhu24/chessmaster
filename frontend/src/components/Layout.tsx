@@ -87,6 +87,12 @@ export default function Layout() {
                   Online
                 </Link>
                 <Link
+                  to="/puzzles"
+                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                >
+                  Puzzles
+                </Link>
+                <Link
                   to="/play"
                   className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                 >

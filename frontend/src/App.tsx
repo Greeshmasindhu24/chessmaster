@@ -15,6 +15,8 @@ import PlayOnlinePage from './pages/PlayOnlinePage'
 import PlayAiPage from './pages/PlayAiPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsPage from './pages/TermsPage'
+import GoogleCallbackPage from './pages/GoogleCallbackPage'
+import PuzzlesPage from './pages/PuzzlesPage'
 
 export default function App() {
   return (
@@ -22,6 +24,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
+        <Route path="auth/google/callback" element={<GoogleCallbackPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="terms" element={<TermsPage />} />
@@ -61,6 +64,14 @@ export default function App() {
               <VerifiedPlayRoute>
                 <PlayOnlinePage />
               </VerifiedPlayRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="puzzles"
+          element={
+            <ProtectedRoute>
+              <PuzzlesPage />
             </ProtectedRoute>
           }
         />

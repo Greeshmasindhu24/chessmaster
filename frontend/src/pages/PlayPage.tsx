@@ -70,18 +70,14 @@ export default function PlayPage() {
       </p>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
-        <div className="glass-panel p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="glass-panel p-3 sm:p-6">
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
             <span className="font-medium text-emerald-400">{status}</span>
             <button onClick={resetGame} className="btn-secondary py-2 text-sm">
               New Game
             </button>
           </div>
-          <ClickChessboard
-            fen={fen}
-            onMove={onMove}
-            boardWidth={Math.min(560, window.innerWidth - 64)}
-          />
+          <ClickChessboard fen={fen} onMove={onMove} maxBoardWidth={560} reservedHeight={300} />
           <p className="mt-3 text-xs text-gray-500">
             Click a piece to see legal moves, then click a highlighted square to move.
           </p>

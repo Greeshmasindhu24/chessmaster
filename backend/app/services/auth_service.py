@@ -1,9 +1,12 @@
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from secrets import token_urlsafe
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
+import httpx
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
@@ -12,10 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_oauth_state_token,
     hash_password,
+    verify_oauth_state_token,
     verify_password,
 )
-from app.models import EmailVerificationToken, Game, PasswordResetToken, Session, User, UserRole
+from app.models import Country, EmailVerificationToken, Game, Gender, PasswordResetToken, Profile, Session, User, UserRole
 from app.schemas.auth import UserLogin, UserRegister
 from app.services.email_service import EmailService
 from app.services.profile_service import ProfileService
@@ -309,23 +314,173 @@ class AuthService:
         await db.delete(user)
 
     @staticmethod
-    def google_oauth_status() -> dict:
+    def _google_oauth_settings():
         from app.core.config import get_settings
 
         settings = get_settings()
-        if not settings.GOOGLE_CLIENT_ID.strip():
+        if not settings.GOOGLE_CLIENT_ID.strip() or not settings.GOOGLE_CLIENT_SECRET.strip():
+            return None
+        return settings
+
+    @staticmethod
+    def google_oauth_status() -> dict:
+        oauth_settings = AuthService._google_oauth_settings()
+        if oauth_settings is None:
             return {
                 "message": "Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
                 "status": "not_configured",
                 "authorize_url": None,
             }
-        params = (
-            f"client_id={settings.GOOGLE_CLIENT_ID}"
-            f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
-            "&response_type=code&scope=openid%20email%20profile"
+        state = create_oauth_state_token()
+        params = urlencode(
+            {
+                "client_id": oauth_settings.GOOGLE_CLIENT_ID,
+                "redirect_uri": oauth_settings.GOOGLE_REDIRECT_URI,
+                "response_type": "code",
+                "scope": "openid email profile",
+                "state": state,
+                "access_type": "online",
+                "prompt": "select_account",
+            }
         )
         return {
-            "message": "Redirect user to Google authorize URL (callback handler: Phase 2).",
+            "message": "Redirect the user to authorize_url to sign in with Google.",
             "status": "configured",
             "authorize_url": f"https://accounts.google.com/o/oauth2/v2/auth?{params}",
         }
+
+    @staticmethod
+    async def _unique_username(db: AsyncSession, base: str) -> str:
+        cleaned = re.sub(r"[^a-z0-9_]", "", base.lower())[:40] or "player"
+        candidate = cleaned
+        suffix = 0
+        while True:
+            result = await db.execute(select(User).where(User.username == candidate))
+            if result.scalar_one_or_none() is None:
+                return candidate
+            suffix += 1
+            candidate = f"{cleaned}_{suffix}"
+
+    @staticmethod
+    async def google_oauth_login(
+        db: AsyncSession,
+        code: str,
+        state: str,
+        user_agent: str | None,
+        ip: str | None,
+    ) -> tuple[User, str, str]:
+        oauth_settings = AuthService._google_oauth_settings()
+        if oauth_settings is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google OAuth is not configured",
+            )
+        if not verify_oauth_state_token(state):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": oauth_settings.GOOGLE_CLIENT_ID,
+                    "client_secret": oauth_settings.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": oauth_settings.GOOGLE_REDIRECT_URI,
+                    "grant_type": "authorization_code",
+                },
+            )
+            if token_resp.status_code != 200:
+                logger.warning("Google token exchange failed: %s", token_resp.text)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to exchange Google authorization code",
+                )
+
+            access_token = token_resp.json().get("access_token")
+            if not access_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Google did not return an access token",
+                )
+
+            userinfo_resp = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if userinfo_resp.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to fetch Google profile",
+                )
+
+        profile_data = userinfo_resp.json()
+        google_id = profile_data.get("sub")
+        email = (profile_data.get("email") or "").strip().lower()
+        email_verified = profile_data.get("email_verified", False)
+        name = (profile_data.get("name") or "").strip()
+        picture = profile_data.get("picture")
+
+        if not google_id or not email:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incomplete Google profile")
+        if not email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Google email is not verified",
+            )
+
+        by_google = await db.execute(select(User).where(User.google_id == google_id))
+        user = by_google.scalar_one_or_none()
+        if user:
+            if user.is_banned:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
+            return await AuthService.issue_session(db, user, user_agent, ip)
+
+        by_email = await db.execute(select(User).where(User.email == email))
+        user = by_email.scalar_one_or_none()
+        if user:
+            if user.role == UserRole.GUEST:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This email belongs to a guest account. Register with a password first.",
+                )
+            if user.google_id and user.google_id != google_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email already linked to a different Google account",
+                )
+            user.google_id = google_id
+            if not user.is_verified:
+                user.is_verified = True
+            if picture:
+                await ProfileService.ensure_user_defaults(db, user)
+                profile_result = await db.execute(select(Profile).where(Profile.user_id == user.id))
+                profile = profile_result.scalar_one_or_none()
+                if profile and not profile.avatar_url:
+                    profile.avatar_url = picture
+            return await AuthService.issue_session(db, user, user_agent, ip)
+
+        username_base = name.replace(" ", "_") if name else email.split("@", 1)[0]
+        username = await AuthService._unique_username(db, username_base)
+        user = User(
+            email=email,
+            username=username,
+            hashed_password=None,
+            role=UserRole.PLAYER,
+            is_verified=True,
+            google_id=google_id,
+        )
+        db.add(user)
+        await db.flush()
+        db.add(
+            Profile(
+                user_id=user.id,
+                avatar_url=picture,
+                gender=Gender.PREFER_NOT_TO_SAY,
+                country=Country.PREFER_NOT_TO_SAY,
+            )
+        )
+        from app.models import UserPreferences
+
+        db.add(UserPreferences(user_id=user.id))
+        await db.flush()
+        return await AuthService.issue_session(db, user, user_agent, ip)

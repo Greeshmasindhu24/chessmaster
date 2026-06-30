@@ -483,8 +483,8 @@ export default function PlayOnlinePage() {
 
       {(phase === 'playing' || phase === 'finished') && gameInfo && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="glass-panel p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="glass-panel p-3 sm:p-6">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
               <span className="font-medium text-emerald-400">{status}</span>
               <div className="flex gap-2">
                 {phase === 'finished' && (
@@ -536,7 +536,8 @@ export default function PlayOnlinePage() {
               fen={fen}
               onMove={onMove}
               boardOrientation={orientation}
-              boardWidth={Math.min(520, window.innerWidth - 64)}
+              maxBoardWidth={520}
+              reservedHeight={360}
               interactive={isMyTurn}
               selectableColor={gameInfo.color === 'white' ? 'w' : 'b'}
             />

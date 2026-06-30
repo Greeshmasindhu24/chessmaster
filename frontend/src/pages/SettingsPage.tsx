@@ -413,9 +413,7 @@ export default function SettingsPage() {
           Features still in development. Remove items from this list as they ship.
         </p>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-500 dark:text-gray-400">
-          <li>Google Sign-In (OAuth)</li>
-          <li>Custom app icon & splash screen</li>
-          <li>Game analysis & daily puzzles</li>
+          <li>Game analysis</li>
           <li>Friends, notifications, rankings</li>
         </ul>
       </SettingsSection>

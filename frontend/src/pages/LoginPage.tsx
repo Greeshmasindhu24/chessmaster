@@ -13,12 +13,18 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [guestLoading, setGuestLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
+    const googleError = params.get('google_error')
+    if (googleError) {
+      setError(decodeURIComponent(googleError.replace(/\+/g, ' ')))
+      return
+    }
     if (params.get('session') === 'expired') {
       setRegisteredMsg('Your session expired. Please sign in again.')
       return
@@ -77,6 +83,26 @@ export default function LoginPage() {
       setError(formatNetworkError(err, 'guest sign in'))
     } finally {
       setGuestLoading(false)
+    }
+  }
+
+  const handleGoogle = async () => {
+    setError('')
+    setGoogleLoading(true)
+    try {
+      const { data } = await authApi.googleOAuthStatus()
+      if (!data.authorize_url) {
+        setError(
+          data.message ||
+            'Google sign-in is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the backend .env.',
+        )
+        return
+      }
+      window.location.assign(data.authorize_url)
+    } catch (err: unknown) {
+      setError(formatNetworkError(err, 'start Google sign-in'))
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -150,9 +176,14 @@ export default function LoginPage() {
           {guestLoading ? 'Creating guest...' : 'Continue as guest'}
         </button>
 
-        <p className="mt-4 text-center text-xs text-gray-500">
-          Google sign-in — Phase 2 (configure GOOGLE_CLIENT_ID)
-        </p>
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={googleLoading}
+          className="btn-secondary mt-3 w-full"
+        >
+          {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+        </button>
 
         <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
           No account?{' '}

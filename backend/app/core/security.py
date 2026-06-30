@@ -45,3 +45,17 @@ def decode_token(token: str) -> dict[str, Any]:
 
 def verify_token_type(payload: dict[str, Any], expected: str) -> bool:
     return payload.get("type") == expected
+
+
+def create_oauth_state_token() -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
+    payload = {"type": "oauth_state", "nonce": str(uuid4()), "exp": expire}
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def verify_oauth_state_token(state: str) -> bool:
+    try:
+        payload = decode_token(state)
+        return verify_token_type(payload, "oauth_state")
+    except JWTError:
+        return False

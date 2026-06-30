@@ -1,5 +1,10 @@
-from fastapi import APIRouter, Depends, Request
+from urllib.parse import quote, urlencode
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import get_settings
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -60,12 +65,32 @@ async def google_oauth_start():
     return OAuthStubResponse(**AuthService.google_oauth_status())
 
 
-@router.get("/google/callback", response_model=OAuthStubResponse)
-async def google_oauth_callback():
-    """Google OAuth callback — full token exchange in Phase 2."""
-    status = AuthService.google_oauth_status()
-    status["message"] = "Google OAuth callback not implemented yet (Phase 2)."
-    return OAuthStubResponse(**status)
+@router.get("/google/callback")
+async def google_oauth_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Google OAuth callback — exchanges code and redirects to the frontend with tokens."""
+    settings = get_settings()
+    frontend_base = settings.FRONTEND_URL.rstrip("/")
+
+    if error:
+        return RedirectResponse(f"{frontend_base}/login?google_error={quote(error)}")
+    if not code or not state:
+        return RedirectResponse(f"{frontend_base}/login?google_error=missing_code")
+
+    try:
+        user_agent = request.headers.get("user-agent")
+        ip = request.client.host if request.client else None
+        _user, access, refresh = await AuthService.google_oauth_login(db, code, state, user_agent, ip)
+        fragment = urlencode({"access_token": access, "refresh_token": refresh})
+        return RedirectResponse(f"{frontend_base}/auth/google/callback#{fragment}")
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, str) else "google_oauth_failed"
+        return RedirectResponse(f"{frontend_base}/login?google_error={quote(detail)}")
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
