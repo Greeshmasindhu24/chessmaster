@@ -23,9 +23,9 @@ export default function VerifiedPlayRoute({ children }: { children: React.ReactN
             </Link>
           </div>
           <p className="mt-4 text-xs text-gray-500">
-            Local board practice is available without verification —{' '}
+            Offline same-device play is available without verification —{' '}
             <Link to="/play" className="text-emerald-600 hover:underline dark:text-emerald-400">
-              open local board
+              play offline
             </Link>
           </p>
         </div>

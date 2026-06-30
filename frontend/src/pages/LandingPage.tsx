@@ -3,31 +3,62 @@ import { motion } from 'framer-motion'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import EmailVerificationBadge from '../components/EmailVerificationBadge'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
-const features = [
+const playModes = [
   {
     icon: '⚡',
-    title: 'Live Multiplayer',
-    desc: 'Real-time games with WebSocket sync',
+    title: 'Play Online',
+    desc: 'Match a random opponent when you are connected',
     path: '/play/online',
     accent: 'from-amber-400/20 to-orange-500/10',
     glow: 'group-hover:shadow-amber-500/20',
+    requiresOnline: true,
+  },
+  {
+    icon: '♟️',
+    title: 'Play Offline',
+    desc: 'Two players on one device — no internet needed',
+    path: '/play',
+    accent: 'from-emerald-400/20 to-teal-500/10',
+    glow: 'group-hover:shadow-emerald-500/20',
+    requiresOnline: false,
   },
   {
     icon: '🤖',
     title: 'Play vs AI',
-    desc: 'Stockfish-powered opponents at any level',
+    desc: 'Stockfish opponents — works offline on your device',
     path: '/play/ai',
     accent: 'from-violet-400/20 to-purple-500/10',
     glow: 'group-hover:shadow-violet-500/20',
+    requiresOnline: false,
+  },
+]
+
+const socialModes = [
+  {
+    icon: '🏆',
+    title: 'Rankings',
+    desc: 'Blitz leaderboards and your standing',
+    path: '/rankings',
+    accent: 'from-yellow-400/20 to-amber-500/10',
+    glow: 'group-hover:shadow-yellow-500/20',
   },
   {
-    icon: '♟️',
-    title: 'Local Board',
-    desc: 'Practice moves on your own board',
-    path: '/play',
-    accent: 'from-emerald-400/20 to-teal-500/10',
-    glow: 'group-hover:shadow-emerald-500/20',
+    icon: '👥',
+    title: 'Friends',
+    desc: 'Add friends and challenge them',
+    path: '/friends',
+    accent: 'from-sky-400/20 to-blue-500/10',
+    glow: 'group-hover:shadow-sky-500/20',
+  },
+  {
+    icon: '🧩',
+    title: 'Daily Puzzles',
+    desc: 'Three fresh tactics every day',
+    path: '/puzzles',
+    accent: 'from-rose-400/20 to-pink-500/10',
+    glow: 'group-hover:shadow-rose-500/20',
   },
 ]
 
@@ -50,13 +81,90 @@ function ChessBoardPattern() {
   )
 }
 
+function ModeCard({
+  mode,
+  index,
+  isAuthenticated,
+  isOnline,
+}: {
+  mode: (typeof playModes)[number] | (typeof socialModes)[number]
+  index: number
+  isAuthenticated: boolean
+  isOnline: boolean
+}) {
+  const requiresOnline = 'requiresOnline' in mode && mode.requiresOnline
+  const disabled = requiresOnline && !isOnline
+  const targetPath = isAuthenticated ? mode.path : '/register'
+  const onlinePath = requiresOnline && isOnline ? `${mode.path}?match=1` : targetPath
+
+  const card = (
+    <div
+      className={`group relative block overflow-hidden rounded-2xl border border-emerald-500/20 bg-white/70 p-6 shadow-lg backdrop-blur-xl transition duration-300 hover:border-emerald-400/50 hover:shadow-2xl ${mode.glow} dark:border-white/10 dark:bg-white/[0.07] dark:hover:border-emerald-400/40 ${
+        disabled ? 'pointer-events-none opacity-50' : ''
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${mode.accent} opacity-0 transition group-hover:opacity-100`}
+        aria-hidden
+      />
+      <div className="relative">
+        <motion.span
+          className="inline-block text-4xl"
+          whileHover={{ scale: 1.15, rotate: 5 }}
+          transition={{ type: 'spring', stiffness: 400 }}
+        >
+          {mode.icon}
+        </motion.span>
+        <h3 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">{mode.title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">{mode.desc}</p>
+        {disabled && (
+          <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+            Requires internet — use Offline or vs AI instead
+          </p>
+        )}
+        <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 transition group-hover:gap-2 dark:text-emerald-400">
+          {isAuthenticated ? (requiresOnline && isOnline ? 'Find match' : 'Play now') : 'Get started'}
+          <span aria-hidden>→</span>
+        </span>
+      </div>
+    </div>
+  )
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: 0.08 * index }}
+      whileHover={disabled ? undefined : { y: -6 }}
+    >
+      {disabled ? card : <Link to={onlinePath}>{card}</Link>}
+    </motion.div>
+  )
+}
+
 export default function LandingPage() {
   const { isAuthenticated, user } = useSelector((s: RootState) => s.auth)
+  const isOnline = useOnlineStatus()
 
   return (
     <div className="relative space-y-24 overflow-hidden pb-8">
       {isAuthenticated && user && !user.is_verified && user.role !== 'guest' && (
         <EmailVerificationBadge user={user} variant="strip" />
+      )}
+
+      {!isOnline && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          You are offline. Online matchmaking is unavailable — use{' '}
+          <Link to="/play" className="font-medium underline">
+            Offline
+          </Link>{' '}
+          or{' '}
+          <Link to="/play/ai" className="font-medium underline">
+            vs AI
+          </Link>{' '}
+          to keep playing.
+        </div>
       )}
 
       {/* Hero */}
@@ -110,7 +218,7 @@ export default function LandingPage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            Free to play · Stockfish AI · Live online
+            {isOnline ? 'Online · Random matchmaking' : 'Offline mode available'} · Stockfish AI
           </motion.div>
 
           <motion.h1
@@ -131,8 +239,8 @@ export default function LandingPage() {
             transition={{ delay: 0.1 }}
             className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 dark:text-gray-200 md:text-xl"
           >
-            Play live multiplayer, challenge Stockfish AI, or practice on a local board —
-            all in one premium chess experience.
+            Play online against random opponents when connected, or go offline for same-device
+            two-player games and AI — all in one premium chess experience.
           </motion.p>
 
           <motion.div
@@ -142,11 +250,21 @@ export default function LandingPage() {
             className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
           >
             <Link
-              to={isAuthenticated ? '/dashboard' : '/register'}
+              to={
+                isAuthenticated
+                  ? isOnline
+                    ? '/play/online?match=1'
+                    : '/play'
+                  : '/register'
+              }
               className="group relative inline-flex items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-emerald-500/30 transition hover:scale-[1.03] hover:shadow-emerald-500/45 active:scale-[0.98]"
             >
               <span className="relative z-10">
-                {isAuthenticated ? 'Go to Dashboard' : 'Start Playing Free'}
+                {isAuthenticated
+                  ? isOnline
+                    ? 'Find Online Match'
+                    : 'Play Offline'
+                  : 'Start Playing Free'}
               </span>
               <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition group-hover:translate-x-full duration-700" />
             </Link>
@@ -179,9 +297,9 @@ export default function LandingPage() {
             className="mt-14 grid grid-cols-3 gap-4 border-t border-emerald-500/20 pt-10 sm:gap-8"
           >
             {[
-              { value: '3', label: 'Game modes' },
-              { value: '∞', label: 'Free practice' },
-              { value: '24/7', label: 'Play online' },
+              { value: isOnline ? 'Live' : 'Off', label: 'Connection' },
+              { value: '∞', label: 'Offline practice' },
+              { value: '24/7', label: 'Online play' },
             ].map((stat) => (
               <div key={stat.label}>
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 md:text-3xl">
@@ -194,7 +312,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Play modes */}
       <section>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -206,47 +324,72 @@ export default function LandingPage() {
             Choose your battlefield
           </h2>
           <p className="mt-3 text-gray-600 dark:text-gray-300">
-            Three ways to play — pick your mode and jump in.
+            Online when connected, offline when you are not — pick your mode and jump in.
           </p>
         </motion.div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f, i) => (
-            <motion.div
+          {playModes.map((f, i) => (
+            <ModeCard
               key={f.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.08 * i }}
-              whileHover={{ y: -6 }}
-            >
-              <Link
-                to={isAuthenticated ? f.path : '/register'}
-                className={`group relative block overflow-hidden rounded-2xl border border-emerald-500/20 bg-white/70 p-6 shadow-lg backdrop-blur-xl transition duration-300 hover:border-emerald-400/50 hover:shadow-2xl ${f.glow} dark:border-white/10 dark:bg-white/[0.07] dark:hover:border-emerald-400/40`}
-              >
-                <div
-                  className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${f.accent} opacity-0 transition group-hover:opacity-100`}
-                  aria-hidden
-                />
-                <div className="relative">
-                  <motion.span
-                    className="inline-block text-4xl"
-                    whileHover={{ scale: 1.15, rotate: 5 }}
-                    transition={{ type: 'spring', stiffness: 400 }}
-                  >
-                    {f.icon}
-                  </motion.span>
-                  <h3 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">{f.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">{f.desc}</p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 transition group-hover:gap-2 dark:text-emerald-400">
-                    {isAuthenticated ? 'Play now' : 'Get started'}
-                    <span aria-hidden>→</span>
-                  </span>
-                </div>
-              </Link>
-            </motion.div>
+              mode={f}
+              index={i}
+              isAuthenticated={isAuthenticated}
+              isOnline={isOnline}
+            />
           ))}
         </div>
+      </section>
+
+      {/* Social & extras — horizontal row like dashboard quick links */}
+      <section>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-6 text-center"
+        >
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">
+            Community
+          </h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            Rankings, friends, and daily puzzles
+          </p>
+        </motion.div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {socialModes.map((f, i) => (
+            <ModeCard
+              key={f.title}
+              mode={f}
+              index={i}
+              isAuthenticated={isAuthenticated}
+              isOnline={isOnline}
+            />
+          ))}
+        </div>
+
+        {isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-8 flex flex-wrap justify-center gap-3"
+          >
+            <Link to="/rankings" className="btn-secondary">
+              Rankings
+            </Link>
+            <Link to="/friends" className="btn-secondary">
+              Friends
+            </Link>
+            <Link to="/puzzles" className="btn-secondary">
+              Puzzles
+            </Link>
+            <Link to="/dashboard" className="btn-primary">
+              Dashboard
+            </Link>
+          </motion.div>
+        )}
       </section>
     </div>
   )

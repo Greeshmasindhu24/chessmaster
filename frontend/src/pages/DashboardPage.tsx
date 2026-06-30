@@ -8,6 +8,7 @@ import { setUser } from '../store/authSlice'
 import { authApi, gamesApi, healthApi } from '../services/api'
 import DevEmailLink from '../components/DevEmailLink'
 import { ageFromDateOfBirth, countryLabel, genderLabel } from '../config/profileFields'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 interface GameSummary {
   id: string
@@ -38,6 +39,7 @@ function outcomeLabel(game: GameSummary, userId: string): { text: string; classN
 export default function DashboardPage() {
   const dispatch = useDispatch()
   const location = useLocation()
+  const isOnline = useOnlineStatus()
   const user = useSelector((s: RootState) => s.auth.user)
   const profile = user?.profile
   const navState = location.state as { verifyUrl?: string | null; justRegistered?: boolean } | null
@@ -186,17 +188,34 @@ export default function DashboardPage() {
         <div className="glass-panel p-6">
           <h2 className="text-lg font-semibold">Quick Play</h2>
           <p className="mt-2 text-sm text-gray-400">
-            Play vs AI, practice locally, or find an online opponent
+            {isOnline
+              ? 'Find a random opponent online, or play offline on this device'
+              : 'You are offline — use same-device or vs AI modes'}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link to="/play/ai" className="btn-primary">
+            {isOnline ? (
+              <Link to="/play/online?match=1" className="btn-primary">
+                Play Online
+              </Link>
+            ) : (
+              <span className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+                Online unavailable
+              </span>
+            )}
+            <Link to="/play" className="btn-secondary">
+              Play Offline
+            </Link>
+            <Link to="/play/ai" className="btn-secondary">
               Play vs AI
             </Link>
-            <Link to="/play/online" className="btn-secondary">
-              Play Online
+            <Link to="/rankings" className="btn-secondary">
+              Rankings
             </Link>
-            <Link to="/play" className="btn-secondary">
-              Local Board
+            <Link to="/friends" className="btn-secondary">
+              Friends
+            </Link>
+            <Link to="/puzzles" className="btn-secondary">
+              Puzzles
             </Link>
           </div>
         </div>

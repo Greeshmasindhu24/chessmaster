@@ -17,7 +17,6 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsPage from './pages/TermsPage'
 import GoogleCallbackPage from './pages/GoogleCallbackPage'
 import PuzzlesPage from './pages/PuzzlesPage'
-import AnalysisPage from './pages/AnalysisPage'
 import FriendsPage from './pages/FriendsPage'
 import RankingsPage from './pages/RankingsPage'
 
@@ -75,14 +74,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PuzzlesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="analysis"
-          element={
-            <ProtectedRoute>
-              <AnalysisPage />
             </ProtectedRoute>
           }
         />

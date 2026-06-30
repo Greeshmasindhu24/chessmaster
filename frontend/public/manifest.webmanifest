@@ -1,7 +1,7 @@
 {
   "name": "ChessMaster Pro",
   "short_name": "ChessMaster",
-  "description": "Play chess locally, vs AI, online, and solve daily puzzles.",
+  "description": "Play chess online, offline on one device, vs AI, and solve daily puzzles.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#030712",

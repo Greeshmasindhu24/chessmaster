@@ -6,8 +6,10 @@ import ClickChessboard from '../components/ClickChessboard'
 import MoveHistory from '../components/MoveHistory'
 import { cloneChess } from '../utils/chessDisplay'
 import { useChessSounds } from '../hooks/useChessSounds'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 export default function PlayPage() {
+  const isOnline = useOnlineStatus()
   const { playAfterMove } = useChessSounds()
   const [game, setGame] = useState(new Chess())
   const [fen, setFen] = useState(game.fen())
@@ -56,18 +58,38 @@ export default function PlayPage() {
       animate={{ opacity: 1 }}
       className="mx-auto max-w-4xl"
     >
-      <h1 className="mb-6 text-2xl font-bold">Local Board</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Play Offline</h1>
+        {isOnline && (
+          <Link to="/play/online?match=1" className="text-sm text-emerald-400 hover:underline">
+            Switch to online →
+          </Link>
+        )}
+      </div>
+
       <p className="mb-4 text-sm text-gray-400">
-        Practice locally,{' '}
+        Two players on the same device — no internet required. For a solo game,{' '}
         <Link to="/play/ai" className="text-emerald-400 hover:underline">
           play vs AI
         </Link>
-        , or{' '}
-        <Link to="/play/online" className="text-emerald-400 hover:underline">
-          play online
-        </Link>{' '}
-        with matchmaking and room codes.
+        .
+        {isOnline && (
+          <>
+            {' '}
+            When connected,{' '}
+            <Link to="/play/online?match=1" className="text-emerald-400 hover:underline">
+              play online
+            </Link>{' '}
+            to match a random opponent.
+          </>
+        )}
       </p>
+
+      {!isOnline && (
+        <p className="mb-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+          Offline mode — internet is not required for this board or vs AI.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <div className="glass-panel p-3 sm:p-6">
@@ -79,7 +101,7 @@ export default function PlayPage() {
           </div>
           <ClickChessboard fen={fen} onMove={onMove} maxBoardWidth={560} reservedHeight={300} />
           <p className="mt-3 text-xs text-gray-500">
-            Click a piece to see legal moves, then click a highlighted square to move.
+            Pass the device between players. Click a piece, then a highlighted square to move.
           </p>
         </div>
 

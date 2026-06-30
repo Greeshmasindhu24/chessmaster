@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Chess, Square } from 'chess.js'
 import ClickChessboard from '../components/ClickChessboard'
@@ -14,6 +14,7 @@ import { buyLabel } from '../config/products'
 import { gameSocket } from '../services/socket'
 import { setUser } from '../store/authSlice'
 import { useChessSounds } from '../hooks/useChessSounds'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import type { RootState } from '../store'
 
 type Phase = 'lobby' | 'waiting' | 'playing' | 'finished'
@@ -35,6 +36,9 @@ interface TimePreset {
 export default function PlayOnlinePage() {
   const dispatch = useDispatch()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+  const autoMatch = searchParams.get('match') === '1'
+  const isOnline = useOnlineStatus()
   const { accessToken, user } = useSelector((s: RootState) => s.auth)
   const [phase, setPhase] = useState<Phase>('lobby')
   const [selectedPreset, setSelectedPreset] = useState<TimePreset | null>(null)
@@ -52,6 +56,7 @@ export default function PlayOnlinePage() {
   const { playAfterMove, playKind } = useChessSounds()
   const chessRef = useRef(chess)
   const fenRef = useRef(fen)
+  const autoMatchStarted = useRef(false)
   chessRef.current = chess
   fenRef.current = fen
 
@@ -264,6 +269,10 @@ export default function PlayOnlinePage() {
 
   const createRoom = async () => {
     if (!selectedPreset || !requireUnlockedOrUpgrade()) return
+    if (!isOnline) {
+      setStatus('Internet required for online play')
+      return
+    }
     try {
       const { data } = await api.post('/games', {
         time_control_seconds: selectedPreset.seconds,
@@ -291,6 +300,10 @@ export default function PlayOnlinePage() {
   const joinRoom = async () => {
     const code = roomCodeInput.trim().toUpperCase()
     if (!code) return
+    if (!isOnline) {
+      setStatus('Internet required for online play')
+      return
+    }
     try {
     const { data } = await api.post('/games/join', { room_code: code })
     setGameInfo({
@@ -308,12 +321,16 @@ export default function PlayOnlinePage() {
     }
   }
 
-  const findMatch = () => {
+  const findMatch = useCallback(() => {
     if (!selectedPreset || !requireUnlockedOrUpgrade()) return
+    if (!isOnline) {
+      setStatus('Internet required for online play — use Offline or vs AI instead')
+      return
+    }
     setPhase('waiting')
-    setStatus('Searching for opponent...')
+    setStatus('Searching for a random opponent...')
     gameSocket.findMatch(selectedPreset.seconds, selectedPreset.increment)
-  }
+  }, [selectedPreset, isOnline])
 
   const cancelSearch = () => {
     if (!selectedPreset) return
@@ -321,6 +338,13 @@ export default function PlayOnlinePage() {
     setPhase('lobby')
     setStatus('Matchmaking cancelled')
   }
+
+  useEffect(() => {
+    if (!autoMatch || autoMatchStarted.current || !isOnline || !selectedPreset) return
+    if (phase !== 'lobby') return
+    autoMatchStarted.current = true
+    findMatch()
+  }, [autoMatch, isOnline, selectedPreset, phase, findMatch])
 
   const isMyTurn = useMemo(() => {
     if (phase !== 'playing' || !gameInfo) return false
@@ -384,9 +408,26 @@ export default function PlayOnlinePage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Play Online</h1>
         <Link to="/play" className="text-sm text-emerald-400 hover:underline">
-          ← Local board
+          ← Offline play
         </Link>
       </div>
+
+      {!isOnline && (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
+          <p className="font-medium">You are offline</p>
+          <p className="mt-1 text-xs text-amber-300/90">
+            Online matchmaking needs an internet connection. Use{' '}
+            <Link to="/play" className="underline">
+              Offline
+            </Link>{' '}
+            for same-device play or{' '}
+            <Link to="/play/ai" className="underline">
+              vs AI
+            </Link>
+            .
+          </p>
+        </div>
+      )}
 
       {phase === 'lobby' && (
         <div className="glass-panel mb-6 space-y-6 p-6">
@@ -439,10 +480,10 @@ export default function PlayOnlinePage() {
               </button>
             ) : (
               <>
-            <button type="button" onClick={findMatch} className="btn-primary" disabled={!selectedPreset}>
-              Find Match
+            <button type="button" onClick={findMatch} className="btn-primary" disabled={!selectedPreset || !isOnline}>
+              Find Random Match
             </button>
-            <button type="button" onClick={createRoom} className="btn-secondary" disabled={!selectedPreset}>
+            <button type="button" onClick={createRoom} className="btn-secondary" disabled={!selectedPreset || !isOnline}>
               Create Room
             </button>
               </>
@@ -450,8 +491,8 @@ export default function PlayOnlinePage() {
           </div>
 
           <p className="text-xs text-gray-500">
-            Online play requires the backend (.\run_backend.ps1) and a logged-in account.
-            Use Create Room + share the code with a friend, or Find Match with two players online.
+            Find Random Match pairs you with another waiting player. Create Room + share a code
+            to play a specific friend. Requires the backend (.\run_backend.ps1) and a logged-in account.
           </p>
 
           <div className="flex gap-2">
@@ -461,8 +502,9 @@ export default function PlayOnlinePage() {
               placeholder="Room code"
               className="input-field flex-1 uppercase"
               maxLength={8}
+              disabled={!isOnline}
             />
-            <button onClick={joinRoom} className="btn-secondary">
+            <button onClick={joinRoom} className="btn-secondary" disabled={!isOnline}>
               Join
             </button>
           </div>
@@ -488,14 +530,9 @@ export default function PlayOnlinePage() {
               <span className="font-medium text-emerald-400">{status}</span>
               <div className="flex gap-2">
                 {phase === 'finished' && (
-                  <>
-                    <Link to={`/analysis?gameId=${gameInfo.gameId}`} className="btn-secondary py-2 text-sm">
-                      Analyze
-                    </Link>
-                    <button onClick={backToLobby} className="btn-primary py-2 text-sm">
-                      Play Again
-                    </button>
-                  </>
+                  <button onClick={backToLobby} className="btn-primary py-2 text-sm">
+                    Play Again
+                  </button>
                 )}
                 {phase === 'playing' && (
                   <>
