@@ -488,9 +488,14 @@ export default function PlayOnlinePage() {
               <span className="font-medium text-emerald-400">{status}</span>
               <div className="flex gap-2">
                 {phase === 'finished' && (
-                  <button onClick={backToLobby} className="btn-primary py-2 text-sm">
-                    Play Again
-                  </button>
+                  <>
+                    <Link to={`/analysis?gameId=${gameInfo.gameId}`} className="btn-secondary py-2 text-sm">
+                      Analyze
+                    </Link>
+                    <button onClick={backToLobby} className="btn-primary py-2 text-sm">
+                      Play Again
+                    </button>
+                  </>
                 )}
                 {phase === 'playing' && (
                   <>

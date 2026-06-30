@@ -8,7 +8,7 @@ import { RootState } from '../store'
 
 interface ClickChessboardProps {
   fen: string
-  onMove: (from: Square, to: Square) => boolean
+  onMove?: (from: Square, to: Square) => boolean
   boardWidth?: number
   maxBoardWidth?: number
   reservedHeight?: number
@@ -19,7 +19,7 @@ interface ClickChessboardProps {
 
 export default function ClickChessboard({
   fen,
-  onMove,
+  onMove = () => false,
   boardWidth: explicitWidth,
   maxBoardWidth = 560,
   reservedHeight = 320,

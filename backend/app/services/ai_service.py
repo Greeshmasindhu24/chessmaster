@@ -77,12 +77,16 @@ def _pick_minimax_move(board: chess.Board, depth: int) -> chess.Move:
     return best_move or next(iter(board.legal_moves))
 
 
-def _stockfish_path() -> Path | None:
+def get_stockfish_path() -> Path | None:
     settings = get_settings()
     path = Path(settings.STOCKFISH_PATH)
     if not path.is_absolute():
         path = PROJECT_ROOT / path
     return path if path.is_file() else None
+
+
+def _stockfish_path() -> Path | None:
+    return get_stockfish_path()
 
 
 class AiService:

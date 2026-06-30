@@ -3,50 +3,72 @@ import { Chess, Square } from 'chess.js'
 import { motion } from 'framer-motion'
 import ClickChessboard from '../components/ClickChessboard'
 import { cloneChess } from '../utils/chessDisplay'
-import { getDailyPuzzle } from '../utils/dailyPuzzle'
+import { getDailyPuzzles, type DailyPuzzle } from '../utils/dailyPuzzle'
 import { useChessSounds } from '../hooks/useChessSounds'
 
 function moveToUci(from: Square, to: Square, promotion?: string): string {
   return `${from}${to}${promotion ?? ''}`
 }
 
+interface PuzzlePlayState {
+  game: Chess
+  fen: string
+  moveIndex: number
+  solved: boolean
+  status: string
+  showHint: boolean
+}
+
+function createPuzzleState(puzzle: DailyPuzzle): PuzzlePlayState {
+  return {
+    game: new Chess(puzzle.fen),
+    fen: puzzle.fen,
+    moveIndex: 0,
+    solved: false,
+    status: 'Find the best move',
+    showHint: false,
+  }
+}
+
 export default function PuzzlesPage() {
-  const puzzle = useMemo(() => getDailyPuzzle(), [])
+  const puzzles = useMemo(() => getDailyPuzzles(), [])
   const { playAfterMove } = useChessSounds()
-  const [game, setGame] = useState(() => new Chess(puzzle.fen))
-  const [fen, setFen] = useState(puzzle.fen)
-  const [moveIndex, setMoveIndex] = useState(0)
-  const [solved, setSolved] = useState(false)
-  const [status, setStatus] = useState('Find the best move')
-  const [showHint, setShowHint] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [states, setStates] = useState<PuzzlePlayState[]>(() => puzzles.map(createPuzzleState))
+
+  const puzzle = puzzles[activeIndex]
+  const { game, fen, solved, status, showHint } = states[activeIndex]
+  const solvedCount = states.filter((s) => s.solved).length
+  const allSolved = solvedCount === puzzles.length
 
   const resetPuzzle = useCallback(() => {
-    const chess = new Chess(puzzle.fen)
-    setGame(chess)
-    setFen(puzzle.fen)
-    setMoveIndex(0)
-    setSolved(false)
-    setStatus('Find the best move')
-    setShowHint(false)
-  }, [puzzle.fen])
+    setStates((prev) =>
+      prev.map((s, i) => (i === activeIndex ? createPuzzleState(puzzles[i]) : s)),
+    )
+  }, [activeIndex, puzzles])
 
   const onMove = useCallback(
     (from: Square, to: Square) => {
-      if (solved) return false
+      const current = states[activeIndex]
+      if (current.solved) return false
 
-      const chess = cloneChess(game)
+      const chess = cloneChess(current.game)
       try {
         const move = chess.move({ from, to, promotion: 'q' })
         if (!move) return false
 
         const played = moveToUci(from, to, move.promotion)
-        const expected = puzzle.solution[moveIndex]
+        const expected = puzzle.solution[current.moveIndex]
         if (played !== expected) {
-          setStatus('Not the best move — try again')
+          setStates((prev) =>
+            prev.map((s, i) =>
+              i === activeIndex ? { ...s, status: 'Not the best move — try again' } : s,
+            ),
+          )
           return false
         }
 
-        let nextIndex = moveIndex + 1
+        let nextIndex = current.moveIndex + 1
         while (nextIndex < puzzle.solution.length) {
           const uci = puzzle.solution[nextIndex]
           const replyFrom = uci.slice(0, 2) as Square
@@ -62,38 +84,69 @@ export default function PuzzlesPage() {
           nextIndex += 1
         }
 
-        setGame(chess)
-        setFen(chess.fen())
-        setMoveIndex(nextIndex)
+        const isSolved = nextIndex >= puzzle.solution.length
         playAfterMove(chess, move)
 
-        if (nextIndex >= puzzle.solution.length) {
-          setSolved(true)
-          setStatus('Puzzle solved!')
-        } else {
-          setStatus('Correct — keep going')
-        }
+        setStates((prev) =>
+          prev.map((s, i) =>
+            i === activeIndex
+              ? {
+                  ...s,
+                  game: chess,
+                  fen: chess.fen(),
+                  moveIndex: nextIndex,
+                  solved: isSolved,
+                  status: isSolved ? 'Puzzle solved!' : 'Correct — keep going',
+                }
+              : s,
+          ),
+        )
         return true
       } catch {
         return false
       }
     },
-    [game, moveIndex, playAfterMove, puzzle.solution, solved],
+    [activeIndex, playAfterMove, puzzle.solution, states],
   )
 
   const sideLabel = game.turn() === 'w' ? 'White' : 'Black'
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-4xl">
-      <h1 className="mb-2 text-2xl font-bold">Daily Puzzle</h1>
-      <p className="mb-6 text-sm text-gray-400">
-        {puzzle.title} — one fresh challenge each day from our puzzle bank.
+      <h1 className="mb-2 text-2xl font-bold">Daily Puzzles</h1>
+      <p className="mb-4 text-sm text-gray-400">
+        Three fresh challenges each day from our puzzle bank.
       </p>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {puzzles.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setActiveIndex(i)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              i === activeIndex
+                ? 'bg-emerald-600 text-white'
+                : states[i].solved
+                  ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+            }`}
+          >
+            Puzzle {i + 1}
+            {states[i].solved && ' ✓'}
+          </button>
+        ))}
+        <span className="ml-auto text-sm text-gray-500">
+          {solvedCount}/{puzzles.length} solved
+        </span>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <div className="glass-panel p-3 sm:p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
-            <span className={`font-medium ${solved ? 'text-emerald-400' : 'text-emerald-300'}`}>{status}</span>
+            <span className={`font-medium ${solved ? 'text-emerald-400' : 'text-emerald-300'}`}>
+              {status}
+            </span>
             <button type="button" onClick={resetPuzzle} className="btn-secondary py-2 text-sm">
               Reset
             </button>
@@ -103,20 +156,34 @@ export default function PuzzlesPage() {
 
         <div className="glass-panel space-y-4 p-6">
           <div>
-            <h2 className="font-semibold">Today&apos;s puzzle</h2>
+            <h2 className="font-semibold">
+              Puzzle {activeIndex + 1} of {puzzles.length}
+            </h2>
+            <p className="mt-1 text-sm font-medium text-gray-300">{puzzle.title}</p>
             <p className="mt-1 text-sm text-gray-400">{sideLabel} to play</p>
           </div>
           <button
             type="button"
-            onClick={() => setShowHint((v) => !v)}
+            onClick={() =>
+              setStates((prev) =>
+                prev.map((s, i) =>
+                  i === activeIndex ? { ...s, showHint: !s.showHint } : s,
+                ),
+              )
+            }
             className="btn-secondary w-full py-2 text-sm"
           >
             {showHint ? 'Hide hint' : 'Show hint'}
           </button>
           {showHint && <p className="text-sm text-gray-400">{puzzle.hint}</p>}
-          {solved && (
+          {solved && !allSolved && (
             <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
-              Nice work! Come back tomorrow for a new puzzle.
+              Nice work! Try the next puzzle above.
+            </p>
+          )}
+          {allSolved && (
+            <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+              All three solved! Come back tomorrow for new puzzles.
             </p>
           )}
         </div>

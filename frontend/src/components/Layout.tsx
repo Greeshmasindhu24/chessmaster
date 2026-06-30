@@ -7,6 +7,7 @@ import { RootState } from '../store'
 import { logout, setUser } from '../store/authSlice'
 import { authApi } from '../services/api'
 import EmailVerificationBadge from './EmailVerificationBadge'
+import NotificationBell from './NotificationBell'
 
 export default function Layout() {
   const { isAuthenticated, user, refreshToken } = useSelector((s: RootState) => s.auth)
@@ -93,6 +94,24 @@ export default function Layout() {
                   Puzzles
                 </Link>
                 <Link
+                  to="/analysis"
+                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                >
+                  Analysis
+                </Link>
+                <Link
+                  to="/friends"
+                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                >
+                  Friends
+                </Link>
+                <Link
+                  to="/rankings"
+                  className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                >
+                  Rankings
+                </Link>
+                <Link
                   to="/play"
                   className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                 >
@@ -105,6 +124,7 @@ export default function Layout() {
                   Settings
                 </Link>
                 <EmailVerificationBadge user={activeUser} variant="nav" />
+                <NotificationBell />
                 <span className="text-sm text-emerald-600 dark:text-emerald-400">{activeUser?.username}</span>
                 <button onClick={handleLogout} className="btn-secondary py-2 text-sm">
                   Logout

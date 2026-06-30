@@ -407,16 +407,6 @@ export default function SettingsPage() {
           )}
         </div>
       </SettingsSection>
-
-      <SettingsSection title="Coming soon">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Features still in development. Remove items from this list as they ship.
-        </p>
-        <ul className="list-inside list-disc space-y-1 text-sm text-gray-500 dark:text-gray-400">
-          <li>Game analysis</li>
-          <li>Friends, notifications, rankings</li>
-        </ul>
-      </SettingsSection>
     </div>
   )
 }

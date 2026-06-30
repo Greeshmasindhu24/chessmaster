@@ -673,11 +673,25 @@ export default function PlayAiPage() {
 
               {phase === 'finished' && (
 
-                <button onClick={resetToSetup} className="btn-secondary py-2 text-sm">
+                <div className="flex gap-2">
 
-                  New Game
+                  {gameId && (
 
-                </button>
+                    <Link to={`/analysis?gameId=${gameId}`} className="btn-primary py-2 text-sm">
+
+                      Analyze
+
+                    </Link>
+
+                  )}
+
+                  <button onClick={resetToSetup} className="btn-secondary py-2 text-sm">
+
+                    New Game
+
+                  </button>
+
+                </div>
 
               )}
 

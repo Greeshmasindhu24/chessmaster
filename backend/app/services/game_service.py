@@ -16,6 +16,15 @@ from app.services.ai_service import AiService
 from app.services.billing_service import BillingService
 
 START_FEN = chess.STARTING_FEN
+ELO_K = 32
+
+
+def _elo_expected(my_rating: int, opp_rating: int) -> float:
+    return 1.0 / (1.0 + 10 ** ((opp_rating - my_rating) / 400.0))
+
+
+def _elo_delta(my_rating: int, opp_rating: int, score: float) -> int:
+    return round(ELO_K * (score - _elo_expected(my_rating, opp_rating)))
 
 
 def _generate_room_code(length: int = 6) -> str:
@@ -77,7 +86,36 @@ class GameService:
             await GameService._record_player_result(db, game.white_player_id, "loss")
             await GameService._record_player_result(db, game.black_player_id, "win")
 
+        if game.mode == GameMode.ONLINE and game.white_player_id and game.black_player_id:
+            await GameService._update_blitz_ratings(db, game)
+
         game._stats_recorded = True  # type: ignore[attr-defined]
+
+    @staticmethod
+    async def _update_blitz_ratings(db: AsyncSession, game: Game) -> None:
+        white_result = await db.execute(select(Profile).where(Profile.user_id == game.white_player_id))
+        black_result = await db.execute(select(Profile).where(Profile.user_id == game.black_player_id))
+        white_profile = white_result.scalar_one_or_none()
+        black_profile = black_result.scalar_one_or_none()
+        if not white_profile or not black_profile:
+            return
+
+        if game.result == "1/2-1/2":
+            white_score, black_score = 0.5, 0.5
+        elif game.result == "1-0":
+            white_score, black_score = 1.0, 0.0
+        elif game.result == "0-1":
+            white_score, black_score = 0.0, 1.0
+        else:
+            return
+
+        white_delta = _elo_delta(white_profile.rating_blitz, black_profile.rating_blitz, white_score)
+        black_delta = _elo_delta(black_profile.rating_blitz, white_profile.rating_blitz, black_score)
+
+        white_profile.rating_blitz = max(100, white_profile.rating_blitz + white_delta)
+        black_profile.rating_blitz = max(100, black_profile.rating_blitz + black_delta)
+        white_profile.highest_rating = max(white_profile.highest_rating, white_profile.rating_blitz)
+        black_profile.highest_rating = max(black_profile.highest_rating, black_profile.rating_blitz)
 
     @staticmethod
     async def create_ai_game(

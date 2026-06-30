@@ -260,3 +260,104 @@ export const billingApi = {
   purchaseOnlineTier: (tier: string, data: DummyPurchaseData) =>
     api.post(`/billing/online-tiers/${tier}/purchase`, data),
 }
+
+export interface AnalyzePositionResult {
+  fen: string
+  turn: string
+  eval_cp: number | null
+  mate: number | null
+  best_move_uci: string | null
+  best_move_san: string | null
+  lines: { moves_uci: string[]; eval_cp: number | null; mate: number | null }[]
+  engine: string
+}
+
+export interface MoveAnalysisResult {
+  move_number: number
+  san: string
+  uci: string
+  fen_before: string
+  eval_before_cp: number | null
+  best_move_uci: string | null
+  eval_after_cp: number | null
+  cp_loss: number | null
+  quality: string
+}
+
+export interface AnalyzeGameResult {
+  game_id: string | null
+  pgn: string | null
+  moves: MoveAnalysisResult[]
+  average_cp_loss: number | null
+  engine: string
+}
+
+export const analysisApi = {
+  position: (fen: string, depth = 12) =>
+    api.post<AnalyzePositionResult>('/analysis/position', { fen, depth }),
+  game: (payload: { game_id?: string; pgn?: string; depth?: number }) =>
+    api.post<AnalyzeGameResult>('/analysis/game', payload),
+  gameById: (gameId: string) => api.get<AnalyzeGameResult>(`/analysis/game/${gameId}`),
+}
+
+export interface FriendSummary {
+  id: string
+  user_id: string
+  friend_id: string
+  status: string
+  created_at: string
+  friend: {
+    id: string
+    username: string
+    avatar_url: string | null
+    rating_blitz: number
+  } | null
+}
+
+export interface UserSearchHit {
+  id: string
+  username: string
+  avatar_url: string | null
+  rating_blitz: number
+  friendship_status: string | null
+}
+
+export const friendsApi = {
+  list: () => api.get<FriendSummary[]>('/friends'),
+  requests: () => api.get<FriendSummary[]>('/friends/requests'),
+  sendRequest: (username: string) => api.post<FriendSummary>('/friends/requests', { username }),
+  accept: (friendshipId: string) => api.post<FriendSummary>(`/friends/requests/${friendshipId}/accept`),
+  decline: (friendshipId: string) => api.post<FriendSummary>(`/friends/requests/${friendshipId}/decline`),
+  search: (q: string) => api.get<UserSearchHit[]>('/friends/search', { params: { q } }),
+}
+
+export interface NotificationItem {
+  id: string
+  type: string
+  title: string
+  message: string
+  data: Record<string, string> | null
+  is_read: boolean
+  created_at: string
+}
+
+export const notificationsApi = {
+  list: () => api.get<NotificationItem[]>('/notifications'),
+  unreadCount: () => api.get<{ count: number }>('/notifications/unread-count'),
+  markRead: (notificationIds?: string[]) =>
+    api.post('/notifications/mark-read', { notification_ids: notificationIds ?? null }),
+}
+
+export interface LeaderboardEntry {
+  rank: number
+  user_id: string
+  username: string
+  avatar_url: string | null
+  rating_blitz: number
+  games_played: number
+  wins: number
+}
+
+export const rankingsApi = {
+  blitz: (limit = 50) => api.get<{ entries: LeaderboardEntry[]; rating_type: string }>('/rankings/blitz', { params: { limit } }),
+}
