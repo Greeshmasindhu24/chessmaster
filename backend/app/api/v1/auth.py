@@ -33,13 +33,7 @@ async def register(data: UserRegister, request: Request, db: AsyncSession = Depe
     user_agent = request.headers.get("user-agent")
     ip = request.client.host if request.client else None
     user, access, refresh = await AuthService.issue_session(db, user, user_agent, ip)
-    verify_url = await AuthService.request_email_verification(db, user)
-    return LoginResponse(
-        access_token=access,
-        refresh_token=refresh,
-        user=user,
-        verify_url=verify_url,
-    )
+    return LoginResponse(access_token=access, refresh_token=refresh, user=user)
 
 
 @router.post("/login", response_model=LoginResponse)

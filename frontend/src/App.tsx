@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
+import AuthBootstrap from './components/AuthBootstrap'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
-import VerifiedPlayRoute from './components/VerifiedPlayRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -22,6 +22,7 @@ import RankingsPage from './pages/RankingsPage'
 
 export default function App() {
   return (
+    <AuthBootstrap>
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<LandingPage />} />
@@ -53,9 +54,7 @@ export default function App() {
           path="play/ai"
           element={
             <ProtectedRoute>
-              <VerifiedPlayRoute>
-                <PlayAiPage />
-              </VerifiedPlayRoute>
+              <PlayAiPage />
             </ProtectedRoute>
           }
         />
@@ -63,9 +62,7 @@ export default function App() {
           path="play/online"
           element={
             <ProtectedRoute>
-              <VerifiedPlayRoute>
-                <PlayOnlinePage />
-              </VerifiedPlayRoute>
+              <PlayOnlinePage />
             </ProtectedRoute>
           }
         />
@@ -103,5 +100,6 @@ export default function App() {
         />
       </Route>
     </Routes>
+    </AuthBootstrap>
   )
 }

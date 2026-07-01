@@ -1,10 +1,9 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { authApi, formatNetworkError } from '../services/api'
 import PasswordInput from '../components/PasswordInput'
-import DevEmailLink from '../components/DevEmailLink'
 import {
   COUNTRY_OPTIONS,
   GENDER_OPTIONS,
@@ -13,9 +12,9 @@ import {
   validateDateOfBirth,
 } from '../config/profileFields'
 import { setCredentials, User } from '../store/authSlice'
+import { RootState } from '../store'
 
 export default function RegisterPage() {
-  const [step, setStep] = useState<'account' | 'verify'>('account')
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -24,9 +23,15 @@ export default function RegisterPage() {
   const [country, setCountry] = useState<Country | ''>('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [verifyUrl, setVerifyUrl] = useState('')
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -55,12 +60,7 @@ export default function RegisterPage() {
           refreshToken: data.refresh_token,
         }),
       )
-      if (data.user.is_verified) {
-        navigate('/dashboard', { replace: true })
-        return
-      }
-      setVerifyUrl(data.verify_url ?? '')
-      setStep('verify')
+      navigate('/dashboard', { replace: true })
     } catch (err: unknown) {
       const networkMsg = formatNetworkError(err, 'register')
       if (networkMsg) {
@@ -73,67 +73,6 @@ export default function RegisterPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  if (step === 'verify') {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-auto max-w-md"
-      >
-        <div className="glass-panel p-8">
-          <h1 className="text-2xl font-bold">Verify your email</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Account created for <span className="font-medium text-emerald-400">{email}</span>.
-            Confirm your email to unlock AI and online play.
-          </p>
-
-          <div className="mt-6 space-y-4 text-sm text-gray-500 dark:text-gray-400">
-            {verifyUrl ? (
-              <p>
-                Email was not sent — SMTP is not configured on the server. Use the verification
-                link below, or ask the server admin to add SMTP env vars (local{' '}
-                <code className="text-xs">.env</code> or Render dashboard for production).
-              </p>
-            ) : (
-              <>
-                <p>
-                  We sent a verification link to your inbox. Open it on this device, then return
-                  here or go to your dashboard.
-                </p>
-                <p className="text-xs">
-                  Did not arrive? Check your spam or junk folder, wait a few minutes, or resend
-                  from Settings.
-                </p>
-              </>
-            )}
-            <DevEmailLink label="Use this link to verify your email:" url={verifyUrl} />
-          </div>
-
-          <div className="mt-8 flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                navigate('/dashboard', {
-                  replace: true,
-                  state: { verifyUrl, justRegistered: true },
-                })
-              }
-              className="btn-primary w-full"
-            >
-              Continue to dashboard
-            </button>
-            <Link
-              to="/settings"
-              className="btn-secondary w-full text-center"
-            >
-              Resend from settings
-            </Link>
-          </div>
-        </div>
-      </motion.div>
-    )
   }
 
   return (

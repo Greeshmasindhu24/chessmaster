@@ -9,7 +9,6 @@ import { logout, setUser } from '../store/authSlice'
 import { authApi, billingApi, formatNetworkError, profileApi } from '../services/api'
 import { BOARD_THEMES } from '../config/boardThemes'
 import { ageFromDateOfBirth, countryLabel, genderLabel } from '../config/profileFields'
-import DevEmailLink from '../components/DevEmailLink'
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -36,8 +35,6 @@ export default function SettingsPage() {
   const [profileErr, setProfileErr] = useState('')
   const [deleteErr, setDeleteErr] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [verifyMsg, setVerifyMsg] = useState('')
-  const [verifyUrl, setVerifyUrl] = useState('')
 
   useEffect(() => {
     if (user?.profile) {
@@ -45,16 +42,6 @@ export default function SettingsPage() {
       setAvatarUrl(user.profile.avatar_url ?? '')
     }
   }, [user?.profile])
-
-  useEffect(() => {
-    if (window.location.hash !== '#verification') return
-    const el = document.getElementById('verification')
-    if (!el) return
-    const timer = window.setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 100)
-    return () => window.clearTimeout(timer)
-  }, [])
 
   const { data: prefs } = useQuery({
     queryKey: ['preferences'],
@@ -106,17 +93,6 @@ export default function SettingsPage() {
       dispatch(setUser(data))
     },
     onError: (err) => setProfileErr(formatNetworkError(err, 'save profile')),
-  })
-
-  const verifyMutation = useMutation({
-    mutationFn: () => authApi.requestEmailVerification(),
-    onSuccess: async (res) => {
-      setVerifyMsg(res.data.message)
-      setVerifyUrl(res.data.verify_url ?? '')
-      const { data } = await authApi.me()
-      dispatch(setUser(data))
-    },
-    onError: (err) => setVerifyMsg(formatNetworkError(err, 'send verification')),
   })
 
   const deleteMutation = useMutation({
@@ -435,41 +411,7 @@ export default function SettingsPage() {
             <span className="text-gray-500 dark:text-gray-400">Country</span>
             <span>{countryLabel(user?.profile?.country)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 dark:text-gray-400">Verified</span>
-            <span className={user?.is_verified ? 'text-emerald-600 dark:text-emerald-400' : 'text-yellow-600'}>
-              {user?.is_verified ? 'Yes' : 'No'}
-            </span>
-          </div>
         </div>
-        {!user?.is_verified && user?.role !== 'guest' && (
-          <div id="verification" className="scroll-mt-24">
-            <button
-              type="button"
-              onClick={() => {
-                setVerifyMsg('')
-                setVerifyUrl('')
-                verifyMutation.mutate()
-              }}
-              disabled={verifyMutation.isPending}
-              className="btn-secondary mt-2 text-sm"
-            >
-              {verifyMutation.isPending ? 'Sending...' : 'Resend verification email'}
-            </button>
-            {verifyMsg && (
-              <p
-                className={`mt-2 text-xs ${
-                  verifyUrl
-                    ? 'text-amber-700 dark:text-amber-300'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {verifyMsg}
-              </p>
-            )}
-            <DevEmailLink label="Use this link to verify your email:" url={verifyUrl} />
-          </div>
-        )}
         <p className="mt-4 text-xs text-gray-500">
           <Link to="/forgot-password" className="text-emerald-600 hover:underline dark:text-emerald-400">
             Forgot password

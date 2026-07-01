@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
-import EmailVerificationBadge from '../components/EmailVerificationBadge'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 const playModes = [
@@ -362,15 +361,11 @@ function ModeCard({
 }
 
 export default function LandingPage() {
-  const { isAuthenticated, user } = useSelector((s: RootState) => s.auth)
+  const { isAuthenticated } = useSelector((s: RootState) => s.auth)
   const isOnline = useOnlineStatus()
 
   return (
     <div className="relative space-y-24 overflow-hidden pb-8">
-      {isAuthenticated && user && !user.is_verified && user.role !== 'guest' && (
-        <EmailVerificationBadge user={user} variant="strip" />
-      )}
-
       {!isOnline && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
           You are offline. Online matchmaking is unavailable — use{' '}

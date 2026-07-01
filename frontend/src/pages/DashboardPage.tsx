@@ -1,12 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { RootState } from '../store'
 import { setUser } from '../store/authSlice'
 import { authApi, gamesApi } from '../services/api'
-import DevEmailLink from '../components/DevEmailLink'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
 interface GameSummary {
@@ -37,12 +36,9 @@ function outcomeLabel(game: GameSummary, userId: string): { text: string; classN
 
 export default function DashboardPage() {
   const dispatch = useDispatch()
-  const location = useLocation()
   const isOnline = useOnlineStatus()
   const user = useSelector((s: RootState) => s.auth.user)
   const profile = user?.profile
-  const navState = location.state as { verifyUrl?: string | null; justRegistered?: boolean } | null
-  const devVerifyUrl = navState?.verifyUrl ?? ''
 
   const { data: freshUser } = useQuery({
     queryKey: ['me'],
@@ -56,10 +52,7 @@ export default function DashboardPage() {
     }
   }, [freshUser, dispatch])
 
-  const activeUser = freshUser ?? user
   const activeProfile = freshUser?.profile ?? profile
-  const showUnverifiedBanner =
-    activeUser && !activeUser.is_verified && activeUser.role !== 'guest'
 
   const { data: history = [] } = useQuery({
     queryKey: ['game-history'],
@@ -87,35 +80,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {showUnverifiedBanner && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-800 dark:text-amber-200"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="font-semibold">Verify your email address</p>
-              <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-300/90">
-                {devVerifyUrl
-                  ? 'Email was not sent — SMTP is not configured on the server. Use the link below to verify.'
-                  : navState?.justRegistered
-                    ? 'We sent a verification link to your inbox. Check spam if it does not arrive within a few minutes.'
-                    : 'AI and online play require a verified email. Check your inbox or resend the link from settings.'}
-              </p>
-              {devVerifyUrl && (
-                <div className="mt-3">
-                  <DevEmailLink label="Verification link:" url={devVerifyUrl} />
-                </div>
-              )}
-            </div>
-            <Link to="/settings" className="btn-primary shrink-0 py-2 text-sm">
-              Verify now
-            </Link>
-          </div>
-        </motion.div>
-      )}
-
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <h1 className="text-3xl font-bold">
           Welcome, <span className="text-emerald-400">{user?.username}</span>

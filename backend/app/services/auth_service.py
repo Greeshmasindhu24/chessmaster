@@ -44,7 +44,7 @@ class AuthService:
             username=data.username.lower(),
             hashed_password=hash_password(data.password),
             role=UserRole.PLAYER,
-            is_verified=False,
+            is_verified=True,
         )
         db.add(user)
         await db.flush()
@@ -96,6 +96,8 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
         if user.is_banned:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
+        if not user.is_verified and user.role != UserRole.GUEST:
+            user.is_verified = True
 
         return await AuthService.issue_session(db, user, user_agent, ip)
 
@@ -125,6 +127,8 @@ class AuthService:
         user = user_result.scalar_one_or_none()
         if not user or not user.is_active or user.is_banned:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User inactive")
+        if not user.is_verified and user.role != UserRole.GUEST:
+            user.is_verified = True
 
         session.is_revoked = True
         access = create_access_token(str(user.id), user.role.value)

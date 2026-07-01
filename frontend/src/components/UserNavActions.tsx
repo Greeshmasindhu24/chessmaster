@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import { RootState } from '../store'
 import { logout, setUser } from '../store/authSlice'
 import { authApi } from '../services/api'
-import EmailVerificationBadge from './EmailVerificationBadge'
 import NotificationBell from './NotificationBell'
 
 interface Props {
@@ -51,7 +50,6 @@ export default function UserNavActions({ className = '' }: Props) {
 
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
-      <EmailVerificationBadge user={activeUser} variant="nav" />
       <NotificationBell />
       <span className="text-sm text-emerald-600 dark:text-emerald-400">{activeUser.username}</span>
       <button type="button" onClick={handleLogout} className="btn-secondary py-2 text-sm">

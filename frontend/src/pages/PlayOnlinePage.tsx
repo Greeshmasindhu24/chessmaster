@@ -38,6 +38,7 @@ export default function PlayOnlinePage() {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const autoMatch = searchParams.get('match') === '1'
+  const inviteRoomCode = searchParams.get('room')?.trim().toUpperCase() ?? ''
   const isOnline = useOnlineStatus()
   const { accessToken, user } = useSelector((s: RootState) => s.auth)
   const [phase, setPhase] = useState<Phase>('lobby')
@@ -59,6 +60,7 @@ export default function PlayOnlinePage() {
   const chessRef = useRef(chess)
   const fenRef = useRef(fen)
   const autoMatchStarted = useRef(false)
+  const autoJoinRoomStarted = useRef(false)
   chessRef.current = chess
   fenRef.current = fen
 
@@ -89,11 +91,17 @@ export default function PlayOnlinePage() {
   const selectedTierInfo = onlineTiers.find((t) => t.id === selectedPreset?.tier)
   const isPresetUnlocked = selectedTierInfo?.unlocked ?? true
 
+  const shareLink = useMemo(() => {
+    if (!createdRoomCode || typeof window === 'undefined') return ''
+    return `${window.location.origin}/play/online?room=${encodeURIComponent(createdRoomCode)}`
+  }, [createdRoomCode])
+
   const shareMessage = useMemo(() => {
     if (!createdRoomCode) return ''
     const presetLabel = selectedPreset?.label ?? 'chess'
-    return `Join me for a ${presetLabel} game on ChessMaster Pro! Room code: ${createdRoomCode}`
-  }, [createdRoomCode, selectedPreset])
+    const linkLine = shareLink ? `\n${shareLink}` : ''
+    return `Join me for a ${presetLabel} game on ChessMaster Pro! Room code: ${createdRoomCode}${linkLine}`
+  }, [createdRoomCode, selectedPreset, shareLink])
 
   const canNativeShare = useMemo(
     () => typeof navigator !== 'undefined' && typeof navigator.share === 'function',
@@ -386,29 +394,32 @@ export default function PlayOnlinePage() {
     }
   }
 
-  const joinRoom = async () => {
-    const code = roomCodeInput.trim().toUpperCase()
-    if (!code) return
-    if (!isOnline) {
-      setStatus('Internet required for online play')
-      return
-    }
-    try {
-    const { data } = await api.post('/games/join', { room_code: code })
-    setGameInfo({
-      gameId: data.id,
-      roomCode: data.room_code,
-      color: 'black',
-    })
-    setOrientation('black')
-    applyFen(data.fen)
-    setPhase('playing')
-    setStatus('Game started!')
-    gameSocket.joinGame(data.id)
-    } catch (err) {
-      setStatus(formatNetworkError(err, 'join room') || 'Could not join room')
-    }
-  }
+  const joinRoom = useCallback(
+    async (codeOverride?: string) => {
+      const code = (codeOverride ?? roomCodeInput).trim().toUpperCase()
+      if (!code) return
+      if (!isOnline) {
+        setStatus('Internet required for online play')
+        return
+      }
+      try {
+        const { data } = await api.post('/games/join', { room_code: code })
+        setGameInfo({
+          gameId: data.id,
+          roomCode: data.room_code,
+          color: 'black',
+        })
+        setOrientation('black')
+        applyFen(data.fen)
+        setPhase('playing')
+        setStatus('Game started!')
+        gameSocket.joinGame(data.id)
+      } catch (err) {
+        setStatus(formatNetworkError(err, 'join room') || 'Could not join room')
+      }
+    },
+    [roomCodeInput, isOnline, applyFen],
+  )
 
   const findMatch = useCallback(() => {
     if (!selectedPreset || !requireUnlockedOrUpgrade()) return
@@ -452,6 +463,7 @@ export default function PlayOnlinePage() {
       await navigator.share({
         title: 'ChessMaster Pro',
         text: shareMessage,
+        url: shareLink || undefined,
       })
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
@@ -466,6 +478,15 @@ export default function PlayOnlinePage() {
     autoMatchStarted.current = true
     findMatch()
   }, [autoMatch, isOnline, selectedPreset, phase, findMatch])
+
+  useEffect(() => {
+    if (!inviteRoomCode || autoJoinRoomStarted.current || !isOnline || !accessToken) return
+    if (phase !== 'lobby' || createdRoomCode) return
+    autoJoinRoomStarted.current = true
+    setRoomCodeInput(inviteRoomCode)
+    setStatus(`Joining room ${inviteRoomCode}...`)
+    void joinRoom(inviteRoomCode)
+  }, [inviteRoomCode, isOnline, accessToken, phase, createdRoomCode, joinRoom])
 
   const isMyTurn = useMemo(() => {
     if (phase !== 'playing' || !gameInfo) return false
@@ -592,7 +613,10 @@ export default function PlayOnlinePage() {
 
           <div>
             <label className="mb-2 block text-sm text-gray-400">Quick match</label>
-            <div className="flex flex-wrap gap-3">
+            <p className="mb-3 text-xs text-gray-500">
+              Pick a time control above, then choose how you want to play.
+            </p>
+            <div className="flex flex-wrap gap-6">
               {!hideDummyBilling && !isPresetUnlocked && selectedTierInfo?.requires_payment ? (
                 <button
                   type="button"
@@ -603,18 +627,25 @@ export default function PlayOnlinePage() {
                 </button>
               ) : (
                 <>
-                  <button type="button" onClick={findMatch} className="btn-primary" disabled={!selectedPreset || !isOnline}>
-                    Find Random Match
-                  </button>
-                  <button type="button" onClick={createRoom} className="btn-secondary" disabled={!selectedPreset || !isOnline}>
-                    Create Room
-                  </button>
+                  <div>
+                    <button type="button" onClick={findMatch} className="btn-primary" disabled={!selectedPreset || !isOnline}>
+                      Find Random Match
+                    </button>
+                    <p className="mt-2 max-w-xs text-xs text-gray-500">
+                      Tap to play someone new — we&apos;ll find an opponent for you.
+                    </p>
+                  </div>
+                  <div>
+                    <button type="button" onClick={createRoom} className="btn-secondary" disabled={!selectedPreset || !isOnline}>
+                      Create Room
+                    </button>
+                    <p className="mt-2 max-w-xs text-xs text-gray-500">
+                      Tap to get a room code, share it with a friend, and wait for them to join.
+                    </p>
+                  </div>
                 </>
               )}
             </div>
-            <p className="mt-2 text-xs text-gray-500">
-              You&apos;re the <span className="text-emerald-400">host</span> — create a room, share the code, and wait. You don&apos;t need to join your own room.
-            </p>
           </div>
 
           <div>
@@ -628,7 +659,7 @@ export default function PlayOnlinePage() {
                 maxLength={8}
                 disabled={!isOnline}
               />
-              <button onClick={joinRoom} className="btn-secondary" disabled={!isOnline || !roomCodeInput.trim()}>
+              <button onClick={() => void joinRoom()} className="btn-secondary" disabled={!isOnline || !roomCodeInput.trim()}>
                 Join Room
               </button>
             </div>

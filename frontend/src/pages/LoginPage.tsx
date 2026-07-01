@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { authApi, formatNetworkError } from '../services/api'
 import PasswordInput from '../components/PasswordInput'
 import { setCredentials, User } from '../store/authSlice'
+import { RootState } from '../store'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -17,8 +18,14 @@ export default function LoginPage() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
+  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated)
 
   useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+      return
+    }
+
     const params = new URLSearchParams(location.search)
     const googleError = params.get('google_error')
     if (googleError) {
@@ -38,15 +45,13 @@ export default function LoginPage() {
     } | null
     if (state?.passwordReset) {
       setRegisteredMsg('Password updated — sign in with your new password.')
-    } else if (state?.emailVerified) {
-      setRegisteredMsg('Email verified — sign in to continue.')
     } else if (state?.registered) {
       setRegisteredMsg('Account created — sign in with your email/username and password.')
     }
     if (state?.email) {
       setEmail(state.email)
     }
-  }, [location.search, location.state])
+  }, [isAuthenticated, navigate, location.search, location.state])
 
   const finishLogin = (data: { user: User; access_token: string; refresh_token: string }) => {
     dispatch(
